@@ -16,7 +16,7 @@ export const router = createBrowserRouter([
     Component: MainPage,
   },
   {
-    path: "/team",
+    path: "/team/:teamId",
     Component: DashboardLayout,
     children: [
       { index: true, Component: Dashboard },

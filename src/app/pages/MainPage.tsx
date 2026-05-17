@@ -125,37 +125,41 @@ function TeamDropdown({
           {selectedTeam ? selectedTeam.name : "팀 선택"}
         </span>
         <ChevronDown
-          className={`w-4 h-4 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
         />
       </button>
 
-      {open && (
-        <div className="absolute right-0 mt-2 w-64 bg-white border border-blue-100 rounded-2xl shadow-xl z-50 overflow-hidden">
-          {teams.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-400 text-center">
-              참여 중인 팀이 없습니다
-            </div>
-          ) : (
-            teams.map((team) => (
-              <button
-                key={team.id}
-                onClick={() => {
-                  onSelect(team);
-                  setOpen(false);
-                }}
-                className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-blue-50 last:border-0 ${
-                  selectedTeam?.id === team.id ? "bg-blue-50" : ""
-                }`}
-              >
-                <p className="text-sm font-semibold text-gray-800 truncate">
-                  {team.name}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">{team.course}</p>
-              </button>
-            ))
-          )}
-        </div>
-      )}
+      {/* 클래스로 애니메이션 제어 */}
+      <div
+        className={`absolute right-0 mt-2 w-64 bg-white border border-blue-100 rounded-2xl shadow-xl z-50 overflow-hidden
+          transition-all duration-200 ease-out
+          ${open
+            ? "opacity-100 translate-y-0 pointer-events-auto"
+            : "opacity-0 -translate-y-2 pointer-events-none"
+          }`}
+      >
+        {teams.length === 0 ? (
+          <div className="px-4 py-3 text-sm text-gray-400 text-center">
+            참여 중인 팀이 없습니다
+          </div>
+        ) : (
+          teams.map((team) => (
+            <button
+              key={team.id}
+              onClick={() => {
+                onSelect(team);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-4 py-3 hover:bg-blue-50 transition-colors border-b border-blue-50 last:border-0 ${
+                selectedTeam?.id === team.id ? "bg-blue-50" : ""
+              }`}
+            >
+              <p className="text-sm font-semibold text-gray-800 truncate">{team.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{team.course}</p>
+            </button>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -180,10 +184,10 @@ function Header({
 }) {
   const navigate = useNavigate();
 
-  const handleTeamSelect = (team: Team) => {
-    onSelectTeam(team);
-    navigate("/team", { state: { team } });
-  };
+    const handleTeamSelect = (team: Team) => {
+      onSelectTeam(team);
+      navigate(`/team/${team.id}`);
+    };
 
 
   return (
@@ -329,20 +333,33 @@ const getTeamList = async() => {
 // ----------------------
 
 const createTeam = async(params : CreateTeamParams) => {
+/* 코드 동작 목적
+   1. 로그인이 되어 있지 않다면 팀 생성을 멈춘다
+   2. 로그인이 되어 있다면 CreateTeamParams의 Interface대로 JSON을 전송해 팀 생성 요청을 백엔드로 전송한다.
+   3-1. (이후 미구현) 백엔드 단에서 res.staus 가 200이면 팀 초대 코드를 출력한다.
+   3-2. 실패하면 실패 오류를 출력한다.
+*/
   if (!isLoggedIn) { return; }
   try {
     const res = await axios.post("http://localhost:3000/api/teams", params);
     console.log("팀 생성 성공");
     console.log(res.status);
   } catch (error) {
+      console.log("팀 생성 실패")
       if (axios.isAxiosError(error)) {
       }
   }
 }
 
+
 const joinTeam = async(params : string) => {
+  /* 코드 동작 목적 (미구현)
+   1. 로그인이 되어 있고, 초대 코드를 담아 서버에 초대 코드를 보내 해당 팀에 넣기를 요청한다.
+   2-1. 백엔드 단에서 res.staus 가 200이면 해당 팀으로 이동한다.
+   2-2. 실패하면 실패 오류를 출력한다.
+*/
   try {
-    const res = await axios.post("http://localhost:3000/api/teams/join", { invite_code : params })
+    const res = await axios.post("http://localhost:3000/api/teams/join", { invite_code : params }) // <- 어떤 양식으로 보내야 할 지 미정
   } catch (err) {}
 }
 
