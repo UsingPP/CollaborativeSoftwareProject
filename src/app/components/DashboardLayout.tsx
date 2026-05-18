@@ -25,12 +25,12 @@ export function DashboardLayout() {
 
   const menuItems = [
     { path: "/team",               icon: Home,          label: "홈" },
-    { path: "/team/announcements", icon: Bell,          label: "공지사항" },
-    { path: "/team/schedule",      icon: Calendar,      label: "일정" },
-    { path: "/team/tasks",         icon: ListTodo,      label: "업무 관리" },
-    { path: "/team/files",         icon: FolderOpen,    label: "자료실" },
-    { path: "/team/chat",          icon: MessageCircle, label: "채팅" },
-    { path: "/team/evaluation",    icon: Star,          label: "상호 평가" },
+    { path: "/team/1/announcements", icon: Bell,          label: "공지사항" },
+    { path: "/team/2/schedule",      icon: Calendar,      label: "일정" },
+    { path: "/team/1/tasks",         icon: ListTodo,      label: "업무 관리" },
+    { path: "/team/1/files",         icon: FolderOpen,    label: "자료실" },
+    { path: "/team/1/chat",          icon: MessageCircle, label: "채팅" },
+    { path: "/team/1/evaluation",    icon: Star,          label: "상호 평가" },
   ];
 
   return (

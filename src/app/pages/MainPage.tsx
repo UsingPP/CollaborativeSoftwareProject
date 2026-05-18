@@ -12,9 +12,12 @@ import {
   User,
   Users,
 } from "lucide-react";
+import { useDispatch, UseDispatch, useSelector } from "react-redux";
+import { login, logout } from "../store/authSlice"
+import { RootState } from "../store";
 
 // ────────────────────────────────────────────
-// 타입
+// 타입(임시)
 // ────────────────────────────────────────────
 
 interface Team {
@@ -39,7 +42,7 @@ interface CreateTeamParams {
 // API 호출부 & 로그인 관리
 // ────────────────────────────────────────────
 
-const fetchMyteams = async (userId : string) : Promise<Team[]> => {
+const fetchMyteams = async (userId : string | null) : Promise<Team[]> => {
   // 실제 구현 시 fetch로 교체할 부분
   await new Promise((resolve) => setTimeout(resolve, 800)); // 로딩 시뮬레이션
 
@@ -258,6 +261,8 @@ function LoginModal({
     getTeamList : () => void;
 }) {
 
+    const dispatch = useDispatch();
+
     return (
       <>
         <div 
@@ -286,6 +291,7 @@ function LoginModal({
 
             <button
               onClick={async () => {
+                dispatch(login({ userId : "userId"}));
                 await getTeamList();
                 closeModal(); // 로그인 성공 시 모달 닫기
               }}
@@ -304,8 +310,13 @@ function LoginModal({
 // 메인 페이지
 // ────────────────────────────────────────────
 export function MainPage() {
-  const [userId, setUserId] = useState("userId");
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // 로그인 유지를 위한 코드//
+  const isLoggedIn = useSelector((state:RootState) => state.auth.isLoggedIn);
+  const userId = useSelector((state: RootState) => state.auth.userId);
+  const dispatch = useDispatch();
+  //
+
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
@@ -316,11 +327,11 @@ export function MainPage() {
 const getTeamList = async() => {
   setIsLoadding(true);
 
+  
   try {
-    //const teams = await
-    const teams = await fetchMyteams(userId);
+    const teams = await fetchMyteams("userId");
     setMyteams(teams);
-    setIsLoggedIn(true);
+    //dispatch(login({ userId : "userId" }));
   } catch (error) {
     console.error("팀 정보를 못 불러왔어요")
   } finally {
@@ -333,12 +344,14 @@ const getTeamList = async() => {
 // ----------------------
 
 const createTeam = async(params : CreateTeamParams) => {
+
 /* 코드 동작 목적
    1. 로그인이 되어 있지 않다면 팀 생성을 멈춘다
    2. 로그인이 되어 있다면 CreateTeamParams의 Interface대로 JSON을 전송해 팀 생성 요청을 백엔드로 전송한다.
    3-1. (이후 미구현) 백엔드 단에서 res.staus 가 200이면 팀 초대 코드를 출력한다.
    3-2. 실패하면 실패 오류를 출력한다.
 */
+
   if (!isLoggedIn) { return; }
   try {
     const res = await axios.post("http://localhost:3000/api/teams", params);
@@ -420,7 +433,7 @@ const handleLogin = async() => {
         selectedTeam={selectedTeam}
         onSelectTeam={setSelectedTeam}
         onLogout={() => {                      // 실제 구현 시 로그아웃 로직으로 교체
-          setIsLoggedIn(false);
+          dispatch(logout());
           setSelectedTeam(null);
         }}
         onLoginClick={() => {setShowLoginModal(true);}}
@@ -429,7 +442,8 @@ const handleLogin = async() => {
       {showLoginModal && (
         <LoginModal
           closeModal={() => setShowLoginModal(false)}
-          getTeamList={getTeamList}/> )
+          getTeamList={getTeamList}
+          /> )
       }
 
       {/* Hero */}
