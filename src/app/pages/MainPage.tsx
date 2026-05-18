@@ -13,22 +13,13 @@ import {
   Users,
 } from "lucide-react";
 import { useDispatch, UseDispatch, useSelector } from "react-redux";
-import { login, logout } from "../store/authSlice"
+import { login, logout, setMyTeamList } from "../store/authSlice"
 import { RootState } from "../store";
+import { Team } from "../types/tpyes";
 
 // ────────────────────────────────────────────
 // 타입(임시)
 // ────────────────────────────────────────────
-
-interface Team {
-  id: number;
-  name: string;
-  course: string;
-  members: string[];
-  status: string;
-  progress: number;
-  dueDate: string;
-}
 
 interface CreateTeamParams {
   team_name : string;
@@ -56,30 +47,16 @@ const fetchMyteams = async (userId : string | null) : Promise<Team[]> => {
 const MY_TEAMS: Team[] = [
   {
     id: 1,
-    name: "클라우드 컴퓨팅 팀프로젝트",
-    course: "웹프로그래밍",
-    members: ["박미소", "송희경", "고명주", "오소원"],
-    status: "진행중",
-    progress: 65,
-    dueDate: "2026-03-19",
+    subject_name: "클라우드 컴퓨팅 팀프로젝트",
   },
   {
     id: 2,
-    name: "운영체제 팀플",
-    course: "데이터베이스",
-    members: ["민지원", "이채현", "박미소"],
-    status: "진행중",
-    progress: 40,
-    dueDate: "2026-03-25",
+    subject_name: "운영체제 팀플",
   },
   {
     id: 3,
-    name: "쿠피사이트 개발",
-    course: "인공지능",
-    members: ["송희경", "고명주", "민지원", "오소원"],
-    status: "진행중",
-    progress: 80,
-    dueDate: "2026-03-20",
+    subject_name: "쿠피사이트 개발",
+
   },
 ];
 
@@ -125,7 +102,7 @@ function TeamDropdown({
       >
         <Users className="w-4 h-4 text-blue-500" />
         <span className="max-w-[140px] truncate">
-          {selectedTeam ? selectedTeam.name : "팀 선택"}
+          {selectedTeam ? selectedTeam.subject_name : "팀 선택"}
         </span>
         <ChevronDown
           className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -157,8 +134,8 @@ function TeamDropdown({
                 selectedTeam?.id === team.id ? "bg-blue-50" : ""
               }`}
             >
-              <p className="text-sm font-semibold text-gray-800 truncate">{team.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{team.course}</p>
+              <p className="text-sm font-semibold text-gray-800 truncate">{team.subject_name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{team.id}</p>
             </button>
           ))
         )}
@@ -317,10 +294,10 @@ export function MainPage() {
   const dispatch = useDispatch();
   //
 
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  const [myTeams, setMyteams] = useState<Team[]>([]);
+  const myTeams = useSelector((state:RootState) => state.auth.myTeamList);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isLoadding, setIsLoadding] = useState(false);
 
   // 로그인 시 해당 팀 가져오기 
@@ -330,8 +307,7 @@ const getTeamList = async() => {
   
   try {
     const teams = await fetchMyteams("userId");
-    setMyteams(teams);
-    //dispatch(login({ userId : "userId" }));
+    dispatch(setMyTeamList(teams));
   } catch (error) {
     console.error("팀 정보를 못 불러왔어요")
   } finally {
@@ -434,7 +410,6 @@ const handleLogin = async() => {
         onSelectTeam={setSelectedTeam}
         onLogout={() => {                      // 실제 구현 시 로그아웃 로직으로 교체
           dispatch(logout());
-          setSelectedTeam(null);
         }}
         onLoginClick={() => {setShowLoginModal(true);}}
       />

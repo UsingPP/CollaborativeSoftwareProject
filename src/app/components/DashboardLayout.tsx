@@ -2,6 +2,11 @@ import { useState } from "react";
 import { Outlet, Link, useLocation } from "react-router";
 import { Home, Bell, Calendar, ListTodo, FolderOpen, MessageCircle, Star, ChevronDown, Check, Palette } from "lucide-react";
 import { useTheme, themes } from "../contexts/ThemeContext";
+import { login, logout, setMyTeamList } from "../store/authSlice";
+import { RootState } from "../store";
+import { Team } from "../types/tpyes";
+import { useDispatch, UseDispatch, useSelector } from "react-redux";
+
 
 const TEAMS = [
   { id: 1, name: "웹 개발 프로젝트" },
@@ -20,9 +25,14 @@ const THEME_COLORS: Record<string, string> = {
 export function DashboardLayout() {
   const location = useLocation();
   const { theme, setThemeName } = useTheme();
-  const [selectedTeam, setSelectedTeam] = useState(TEAMS[0]);
+  
+  const myTeams = useSelector((state:RootState) => state.auth.myTeamList);
+  
+  const [selectedTeam, setSelectedTeam] = useState(myTeams[0]);
+  
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
-
+  
+  
   const menuItems = [
     { path: "/team",               icon: Home,          label: "홈" },
     { path: "/team/1/announcements", icon: Bell,          label: "공지사항" },
@@ -56,16 +66,17 @@ export function DashboardLayout() {
             onClick={() => setShowTeamDropdown(!showTeamDropdown)}
             className="w-full flex items-center justify-between gap-1 text-sm font-semibold text-slate-700 hover:text-slate-900 transition-colors"
           >
-            <span className="truncate">{selectedTeam.name}</span>
+            <span className="truncate">{selectedTeam.subject_name}</span>
             <ChevronDown className={`w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform ${showTeamDropdown ? "rotate-180" : ""}`} />
           </button>
           {showTeamDropdown && (
             <div className="absolute left-3 right-3 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1">
-              {TEAMS.map(team => (
+              {
+              myTeams.map(team => (
                 <button
                   key={team.id}
                   type="button"
-                  onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); }}
+                  onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); console.log(team) }}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                     selectedTeam.id === team.id
                       ? `${theme.bgLight} ${theme.textDark} font-medium`
@@ -76,7 +87,7 @@ export function DashboardLayout() {
                     ? <Check className={`w-3.5 h-3.5 shrink-0 ${theme.textAccent}`} />
                     : <span className="w-3.5 shrink-0" />
                   }
-                  <span>{team.name}</span>
+                  <span>{team.subject_name}</span>
                 </button>
               ))}
             </div>
