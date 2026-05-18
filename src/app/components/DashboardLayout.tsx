@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Outlet, Link, useLocation } from "react-router";
+import { Outlet, Link, useLocation, useNavigate, useParams } from "react-router";
 import { Home, Bell, Calendar, ListTodo, FolderOpen, MessageCircle, Star, ChevronDown, Check, Palette } from "lucide-react";
 import { useTheme, themes } from "../contexts/ThemeContext";
 import { login, logout, setMyTeamList } from "../store/authSlice";
@@ -24,23 +24,31 @@ const THEME_COLORS: Record<string, string> = {
 
 export function DashboardLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { teamId } = useParams();
+
   const { theme, setThemeName } = useTheme();
   
   const myTeams = useSelector((state:RootState) => state.auth.myTeamList);
   
-  const [selectedTeam, setSelectedTeam] = useState(myTeams[0]);
+  const [selectedTeam, setSelectedTeam] = useState(
+    () => {
+      const currentTeam = myTeams.find(team => String(team.id) === String(teamId));
+      return currentTeam;
+    }
+  );
   
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   
   
   const menuItems = [
-    { path: "/team",               icon: Home,          label: "홈" },
-    { path: "/team/1/announcements", icon: Bell,          label: "공지사항" },
-    { path: "/team/2/schedule",      icon: Calendar,      label: "일정" },
-    { path: "/team/1/tasks",         icon: ListTodo,      label: "업무 관리" },
-    { path: "/team/1/files",         icon: FolderOpen,    label: "자료실" },
-    { path: "/team/1/chat",          icon: MessageCircle, label: "채팅" },
-    { path: "/team/1/evaluation",    icon: Star,          label: "상호 평가" },
+    { path: `/team/${teamId}`,               icon: Home,          label: "홈" },
+    { path: `/team/${teamId}/announcements`, icon: Bell,          label: "공지사항" },
+    { path: `/team/${teamId}/tasks`,         icon: ListTodo,      label: "업무 관리" },
+    { path: `/team/${teamId}/schedule`,      icon: Calendar,      label: "일정" },
+    { path: `/team/${teamId}/files`,         icon: FolderOpen,    label: "자료실" },
+    { path: `/team/${teamId}/chat`,          icon: MessageCircle, label: "채팅" },
+    { path: `/team/${teamId}/evaluation`,    icon: Star,          label: "상호 평가" },
   ];
 
   return (
@@ -76,7 +84,7 @@ export function DashboardLayout() {
                 <button
                   key={team.id}
                   type="button"
-                  onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); console.log(team) }}
+                  onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); console.log(`/team/${team.id}`); navigate(`/team/${team.id}`) }}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                     selectedTeam.id === team.id
                       ? `${theme.bgLight} ${theme.textDark} font-medium`

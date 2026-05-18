@@ -1,9 +1,42 @@
 import { Link } from "react-router";
 import { Calendar, CheckCircle2, FileText, Pin } from "lucide-react";
 import { useTheme } from "../contexts/ThemeContext";
+import axios from 'axios'
+import { useParams } from "react-router";
+import { Team, BASE_API_URL, PORT } from "../types/tpyes";
+import { useEffect, useState } from "react";
+
+const fetchMyteams = async (team_id : string | null) => {
+  console.log(`${BASE_API_URL}:${PORT}/api/teams/${team_id}`);
+  try {
+    console.log("START HTTP");
+    const res = await axios.get<Team>(`${BASE_API_URL}:${PORT}/api/teams/${team_id}`);
+    console.log(res.data);
+    return res.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.log("서버 에러:", error.response?.status);
+    } else {
+      console.log("네트워크 에러:", error);
+    }
+  }
+  return 
+}
 
 export function Dashboard() {
+  const { teamId } = useParams();
   const { theme } = useTheme();
+  const [ teamData, setTeamData ] = useState<Team | null >(null); 
+
+  useEffect(() => {
+    const fatchData = async () => {
+    const data = await fetchMyteams(teamId);
+    setTeamData(data);
+    }
+    console.log(teamId);
+    fatchData();
+  }, [teamId]
+  );
 
   const todayTasks = [
     { id: 1, task: "UI 디자인 초안 제출", assignee: "박미소" },
@@ -26,7 +59,7 @@ export function Dashboard() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">웹 개발 프로젝트</h1>
+        <h1 className="text-2xl font-bold text-slate-900"> {teamData?.subject_name}</h1>
         <p className="text-slate-500 mt-1 text-sm">Team Alpha</p>
       </div>
 

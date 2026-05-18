@@ -300,7 +300,9 @@ export function MainPage() {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isLoadding, setIsLoadding] = useState(false);
 
+
   // 로그인 시 해당 팀 가져오기 
+  // 통신으로 새로고침할 때마다 수행하는 방식으로 바꾸는게 낫지 않을까 싶음
 const getTeamList = async() => {
   setIsLoadding(true);
 
