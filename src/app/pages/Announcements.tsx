@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Pin, Bell, Plus, X } from "lucide-react";
+import axios from "axios";
+import { BASE_API_URL, Notice, PORT } from "../types/tpyes";
 
 type Announcement = {
   id: number;
@@ -9,6 +11,76 @@ type Announcement = {
   content: string;
   isPinned: boolean;
 };
+
+const fatchAnnouncementsData = async ( team_id : string | null ) => { 
+  /* 3. 공지사항 목록 조회 메서드 구현
+    - API 요청 사항
+    /api/teams/{teamId}/notices로 요청할 때 해당 페이지는 notice를 리스트로 묶어서 json으로 반환
+    반환된 json은 정의된 Notice 형태의 인터페이스로 교환 후 리스트로 변환시켜 반환
+    실패 시(status != 200인 경우) 예외 처리 (어떻게 처리할 지는 아직 미정)
+  */
+  try { 
+    const res = await axios.get<Notice[]>(`${BASE_API_URL}/${PORT}/api/teams/${team_id}/notice`);
+    if (res.status == 200)
+      { return res.data }
+    else { return; }
+  } catch (err) {
+    if (err == axios.isAxiosError(err)) {
+      console.log("서버 오류")
+    }
+  }
+};
+
+const postAnnouncemetsData = async (team_id : string, content : Notice) => {
+  /* 3-2 공지사항 작성 메서드
+  - API 요청사항
+  해당 POST 요청이 성공하면 status가 200을, 아니면 해당 오류에 관련된 status를 반환
+  - 함수 진행
+  요청에 성공 시 1을 return, 아니면 0을 리턴
+  */
+  try{
+    const res = await axios.post(`${BASE_API_URL}/${PORT}/api/${team_id}/notices`, content);
+    if (res.status == 200) {
+      return 1;
+    }
+    else { return -1 }
+  } catch (err) {
+    return -1
+  }
+};
+
+const fatchDetailAnnouncementsData = async ( notice_id : string ) => {
+  /* 3-3 공지사항 세부 확인 메서드
+  - API 요청 사항 : Notice 인터페이스 형식의 JSON으로 요청
+  */
+    try {
+      const res = await axios.get<Notice>(`${BASE_API_URL}/${PORT}/api/notices/${notice_id}`);
+      return res.data;
+    } catch (err) {
+      return -1;
+    }
+};
+
+const writeAnnouncement = (user_id : string, 
+                           team_id:string, 
+                           title : string, 
+                           content : string, 
+                           is_leader :boolean) : Notice => {
+  /*
+    내부 수행 함수. user_id, team_id, ....을 작성하면 Notice 형태로 반환
+  */
+  
+  const parse_team_num = parseInt(team_id, 10);
+  const parse_auther_num = parseInt(user_id, 10);
+  const data : Notice = { 
+    team_id : parse_team_num,
+    author_id: parse_auther_num,
+    title: title,
+    content: content,
+    is_leader_notice: is_leader,
+  }
+  return data;
+} 
 
 export function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([
@@ -25,6 +97,7 @@ export function Announcements() {
     { id: 6, title: "프로젝트 킥오프 회의 결과", author: "박미소", date: "2026-03-08",
       content: "킥오프 회의에서 논의된 내용을 정리했습니다. 프로젝트 목표와 일정을 확인해주세요.", isPinned: false },
   ]);
+
 
   const [showForm, setShowForm]       = useState(false);
   const [formTitle, setFormTitle]     = useState("");
