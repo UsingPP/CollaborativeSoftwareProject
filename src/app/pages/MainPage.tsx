@@ -15,7 +15,7 @@ import {
 import { useDispatch, UseDispatch, useSelector } from "react-redux";
 import { login, logout, setMyTeamList } from "../store/authSlice"
 import { RootState } from "../store";
-import { Team } from "../types/tpyes";
+import { BASE_API_URL, Team, PORT } from "../types/tpyes";
 
 // ────────────────────────────────────────────
 // 타입(임시)
@@ -38,8 +38,49 @@ const fetchMyteams = async (userId : string | null) : Promise<Team[]> => {
   await new Promise((resolve) => setTimeout(resolve, 800)); // 로딩 시뮬레이션
 
   return MY_TEAMS;
-}
+};
 
+const createNewTeam = async (team_info  : Team) => {
+  /* 2-1 새 팀 생성 요청을 보냄
+  
+  */
+  try {
+    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/teams`, team_info);
+    if (res.status == 200) {
+      return 1;
+    }
+    return -1;
+  } catch(err) {
+    return -1;
+  }
+};
+
+const joinNewTeam = async (team_code  : string) => {
+  /* 2-2 코드로 팀 초대 요청을 전송
+  
+  */
+  try {
+    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/join`, {"invite_code" : team_code});
+    if (res.status == 200) {
+      return 1;
+    }
+    return -1;
+  } catch(err) {
+    return -1;
+  }
+};
+
+export const findMyTeams = async () : Promise<Team[]> => {
+/* 2-3. 내 팀을 찾기
+token으로 개인을 식별한다는 것을 가정 (아직 토큰 관련은 미구현)
+*/
+  try { 
+    const res = await axios.get<Team[]>(`${BASE_API_URL}:${PORT}/api/teams`);
+    return res.data;
+  } catch(err) {
+    return [];
+  }
+};
 
 // ────────────────────────────────────────────
 // 더미 데이터

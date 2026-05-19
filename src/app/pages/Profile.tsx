@@ -1,5 +1,8 @@
 import { Link } from "react-router";
 import { ArrowLeft, Mail, MapPin, BookOpen, IdCard, Star } from "lucide-react";
+import axios from "axios";
+
+// const getMyPageInfo = ( user_id :  )
 
 export function Profile() {
   const evaluations = [

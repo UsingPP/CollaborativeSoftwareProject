@@ -1,7 +1,62 @@
 import { useState } from "react";
 import { Send, Search, Phone, Video, Plus, Sparkles, Copy, Check, X } from "lucide-react";
+import "../types/tpyes"
+import axios from "axios";
+import { BASE_API_URL, Chat_Message, PORT } from "../types/tpyes";
+
 
 type Message = { id: number; sender: string; content: string; time: string; isMine: boolean };
+
+// --------------------------
+// API 코드 구현부
+// --------------------------
+
+const createChatRooms = async (team_id : string) => {
+  try {
+    const int_team_id = parseInt(team_id, 10);
+    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/teams/${int_team_id}/rooms`);
+    return res;
+  } catch ( err ) {
+
+  }
+};
+
+const fatchChatRoomsList = async (team_id : string) => {
+  try {
+    
+    const int_team_id = parseInt(team_id, 10);
+    const res = await axios.get(`${BASE_API_URL}:${PORT}/api/teams/${int_team_id}/chat-rooms`);
+    return res.data;
+  } catch ( err ) {
+    
+  }
+};
+
+const fatchLastChatsInRoom = async (room_id : string) => {
+  try {
+    const int_room_id = parseInt(room_id, 10);
+    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/chat-rooms/${int_room_id}/messages`);
+  } catch ( err ) {
+    
+  }
+};
+
+const createAIPromptInRoom = async (chat_message_list : Chat_Message[] ) => {
+  try {
+    if (chat_message_list.length != 0 && chat_message_list[0].room_id != null) {
+      const res = await axios.post(`${BASE_API_URL}:${PORT}/api/chat-rooms/`);
+      return 1;
+    }
+    else {
+      console.log("지금까지 나눈 채팅이 하나도 없어요")
+    }
+  } catch ( err ) {
+    
+  }
+};
+
+
+
 
 const DEMO_PROMPT = `당신은 팀 프로젝트 협업 AI 어시스턴트입니다. 아래 팀 회의 내용을 바탕으로 팀원들을 도와주세요.
 
