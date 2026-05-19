@@ -1,8 +1,20 @@
 import { Link } from "react-router";
 import { ArrowLeft, Mail, MapPin, BookOpen, IdCard, Star } from "lucide-react";
 import axios from "axios";
+import { BASE_API_URL, PORT,  } from "../types/tpyes";
 
-// const getMyPageInfo = ( user_id :  )
+
+/*------------------------------
+API 구현부
+-------------------------------*/ 
+ const getMyPageInfo = async ( ) => {
+  const res = await axios.get(`${BASE_API_URL}:${PORT}/api/users/me`);
+  return res.data;
+ };
+
+ const patchMyPageInfo = async () => {
+  const res = await axios.patch(`${BASE_API_URL}:${PORT}/api/users/me`);
+ }
 
 export function Profile() {
   const evaluations = [

@@ -1,5 +1,23 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
+import axios from "axios";
+import { BASE_API_URL, PORT, Evaluation } from "../types/tpyes";
+
+const evaluateMyProjectTeamMate = async ( eval_teammate_form : Evaluation ) => {
+  try {
+    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/teams/${eval_teammate_form.team_id}/members/eval-status`, eval_teammate_form);
+    return 1;
+  } catch( error ) {
+
+  }
+};
+const fetchMyTeamMateList = async () => {
+  try {
+    // 팀원 중 내가 평가한 사람과 평가하지 않은 사람 구분 조회 => 어떤 형식으로 오는건가요?
+  } catch( error ) {
+
+  }
+};
 
 export function Evaluation() {
   const [selectedMember, setSelectedMember] = useState<number | null>(null);
