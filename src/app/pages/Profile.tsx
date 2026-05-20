@@ -42,7 +42,7 @@ API 구현부
  const patchMyPageInfo = async ( info : any) => {
   //const res = await axios.patch(`${BASE_API_URL}:${PORT}/api/users/me`);
   try {
-    const res = await api.patch(`api/users/me`);
+    const res = await api.patch(`/api/users/me`);
   } catch( err ) {
 
   }

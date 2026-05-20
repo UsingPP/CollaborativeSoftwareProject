@@ -6,7 +6,7 @@ import { useParams } from "react-router";
 import { Team, BASE_API_URL, PORT } from "../types/tpyes";
 import { useEffect, useState } from "react";
 
-const fetchMyteams = async (team_id : string | null) => {
+const fetchMyteams = async (team_id : string | undefined) => {
   try {
     const res = await axios.get<Team>(`${BASE_API_URL}:${PORT}/api/teams/${team_id}`);
     return res.data;
