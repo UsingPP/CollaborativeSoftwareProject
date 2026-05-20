@@ -9,7 +9,7 @@ export interface User {
     profile_image_url? : string;
     residence? : string;
     intro? : string;
-    created_at? : Date;
+    created_at? : string;
 }
 
 export interface Team {
@@ -18,16 +18,16 @@ export interface Team {
     subject_name? : string;
     invite_code? : string;
     status? : string;
-    deadline? : Date;
+    deadline? : string;
     leader_id? : number;
-    created_at? : Date;
+    created_at? : string;
 }
 
 export interface Team_Member {
     id? : number;
     team_id? : number;
     user_id? : number;
-    joined_at? : Date;
+    joined_at? : string;
 }
 
 export interface Task {
@@ -35,10 +35,10 @@ export interface Task {
     team_id? : number;
     assignee_id? : number;
     task_name? : string;
-    due_date? : Date;
+    due_date? : string;
     status?: string;
-    created_at? : Date;
-    updated_at? : Date;
+    created_at? : string;
+    updated_at? : string;
 }
 
 export interface AI_Schedule_Session {
@@ -47,7 +47,7 @@ export interface AI_Schedule_Session {
     goal?: string;
     deadline?: string;
     status?: string;
-    created_at?: Date;
+    created_at?: string;
 }
 
 export interface AI_Schedule_Task {
@@ -56,7 +56,7 @@ export interface AI_Schedule_Task {
     task_name?: string;
     start_date?: string;
     due_date?: string;
-    created_at?: Date;
+    created_at?: string;
 }
 
 export interface Notice {
@@ -66,7 +66,7 @@ export interface Notice {
     title?: string;
     content?: string;
     is_leader_notice?: boolean;
-    created_at?: Date;
+    created_at?: string;
 }
 
 export interface Reference_Room {
@@ -75,20 +75,20 @@ export interface Reference_Room {
     uploader_id?: number;
     file_name?: string;
     file_url?: string;
-    created_at?: Date;
+    created_at?: string;
 }
 
 export interface Chat_Room {
     id?: number;
     team_id?: number;
     room_name?: string;
-    created_at?: Date;
+    created_at?: string;
 }
 
 export interface Chat_Room_Member {
     room_id?: number;
     user_id?: number;
-    joined_at?: Date;
+    joined_at?: string;
 }
 
 export interface Chat_Message {
@@ -96,10 +96,10 @@ export interface Chat_Message {
     room_id?: number;
     sender_id?: number;
     message_content?: string;
-    created_at?: Date;
+    created_at?: string;
 }
 
-export interface Evaluation {
+export interface EvaluationForm {
     id?: number;
     team_id?: number;
     evaluator_id?: number;
@@ -110,7 +110,7 @@ export interface Evaluation {
     score_collaboration?: number;
     score_creativity?: number;
     comment?: string;
-    created_at?: Date;
+    created_at?: string;
 }
 
 export const BASE_API_URL = "http://localhost";

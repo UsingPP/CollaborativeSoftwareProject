@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, Link, useLocation, useNavigate, useParams } from "react-router";
 import { Home, Bell, Calendar, ListTodo, FolderOpen, MessageCircle, Star, ChevronDown, Check, Palette } from "lucide-react";
 import { useTheme, themes } from "../contexts/ThemeContext";
-import { login, logout, setMyTeamList } from "../store/authSlice";
+import { login, logout } from "../store/authSlice";
 import { RootState } from "../store";
 import { Team } from "../types/tpyes";
 import { useDispatch, UseDispatch, useSelector } from "react-redux";
-
+import { fetchMyteams } from "../pages/MainPage";
 
 const TEAMS = [
   { id: 1, name: "웹 개발 프로젝트" },
@@ -29,15 +29,11 @@ export function DashboardLayout() {
 
   const { theme, setThemeName } = useTheme();
   
-  const myTeams = useSelector((state:RootState) => state.auth.myTeamList);
+  const [ myTeams, setMyteams] = useState<Team[]>([]);
   
-  const [selectedTeam, setSelectedTeam] = useState(
-    () => {
-      const currentTeam = myTeams.find(team => String(team.id) === String(teamId));
-      return currentTeam;
-    }
-  );
-  
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+
+
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
   
   
@@ -50,6 +46,28 @@ export function DashboardLayout() {
     { path: `/team/${teamId}/chat`,          icon: MessageCircle, label: "채팅" },
     { path: `/team/${teamId}/evaluation`,    icon: Star,          label: "상호 평가" },
   ];
+
+
+  useEffect( () => {
+    const fatchTeams = async () => {
+    try {
+        const teams = await fetchMyteams();
+        setMyteams(teams);
+
+        const currentTeam = teams.find(team => String(team.id) === String(teamId));
+
+        if (currentTeam) {
+          setSelectedTeam(currentTeam);
+        }
+      } catch ( err ) {}
+    };
+    fatchTeams();
+  }, [teamId]
+  );
+  
+if (!selectedTeam) {
+  return <div className="p-8 text-center text-slate-500">데이터를 불러오는 중입니다...</div>;
+}
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -84,7 +102,7 @@ export function DashboardLayout() {
                 <button
                   key={team.id}
                   type="button"
-                  onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); console.log(`/team/${team.id}`); navigate(`/team/${team.id}`) }}
+                  onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); navigate(`/team/${team.id}`) }}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                     selectedTeam.id === team.id
                       ? `${theme.bgLight} ${theme.textDark} font-medium`

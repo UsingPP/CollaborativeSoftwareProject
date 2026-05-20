@@ -7,17 +7,12 @@ import { Team, BASE_API_URL, PORT } from "../types/tpyes";
 import { useEffect, useState } from "react";
 
 const fetchMyteams = async (team_id : string | null) => {
-  console.log(`${BASE_API_URL}:${PORT}/api/teams/${team_id}`);
   try {
-    console.log("START HTTP");
     const res = await axios.get<Team>(`${BASE_API_URL}:${PORT}/api/teams/${team_id}`);
-    console.log(res.data);
     return res.data;
   } catch (error) {
     if (axios.isAxiosError(error)) {
-      console.log("서버 에러:", error.response?.status);
     } else {
-      console.log("네트워크 에러:", error);
     }
   }
   return 
@@ -33,7 +28,6 @@ export function Dashboard() {
     const data = await fetchMyteams(teamId);
     setTeamData(data);
     }
-    console.log(teamId);
     fatchData();
   }, [teamId]
   );

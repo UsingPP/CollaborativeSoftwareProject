@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import axios from "axios";
-import { BASE_API_URL, PORT, Evaluation } from "../types/tpyes";
+import { BASE_API_URL, PORT, EvaluationForm } from "../types/tpyes";
 
-const evaluateMyProjectTeamMate = async ( eval_teammate_form : Evaluation ) => {
+const evaluateMyProjectTeamMate = async ( eval_teammate_form : EvaluationForm ) => {
   try {
     const res = await axios.post(`${BASE_API_URL}:${PORT}/api/teams/${eval_teammate_form.team_id}/members/eval-status`, eval_teammate_form);
     return 1;
