@@ -1,6 +1,36 @@
 import { Calendar, CheckCircle2, FileText, Pin } from "lucide-react";
+import { useTheme } from "../contexts/ThemeContext";
+import axios from 'axios'
+import { useParams } from "react-router";
+import { Team, BASE_API_URL, PORT } from "../types/tpyes";
+import { useEffect, useState } from "react";
+
+const fetchMyteams = async (team_id : string | undefined) => {
+  try {
+    const res = await axios.get<Team>(`${BASE_API_URL}:${PORT}/api/teams/${team_id}`);
+    return res.data;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+    } else {
+    }
+  }
+  return 
+}
 
 export function Dashboard() {
+  const { teamId } = useParams();
+  const { theme } = useTheme();
+  const [ teamData, setTeamData ] = useState<Team | null >(null); 
+
+  useEffect(() => {
+    const fatchData = async () => {
+    const data = await fetchMyteams(teamId);
+    setTeamData(data);
+    }
+    fatchData();
+  }, [teamId]
+  );
+
   const todayTasks = [
     { id: 1, task: "UI 디자인 초안 제출", time: "14:00", assignee: "박미소" },
     { id: 2, task: "팀 회의", time: "16:00", assignee: "전체" },
@@ -38,11 +68,8 @@ export function Dashboard() {
     <div className="p-8">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">🐻</span>
-          <h1 className="text-3xl font-bold text-gray-900">웹 개발 프로젝트</h1>
-        </div>
-        <p className="text-gray-600 mt-1">Team Alpha</p>
+        <h1 className="text-2xl font-bold text-slate-900"> {teamData?.subject_name}</h1>
+        <p className="text-slate-500 mt-1 text-sm">Team Alpha</p>
       </div>
 
       {/* Important Announcement */}

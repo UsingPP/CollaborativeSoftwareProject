@@ -1,5 +1,130 @@
 import { useState } from "react";
-import { Send, Search, Phone, Video, Plus } from "lucide-react";
+import { Send, Search, Phone, Video, Plus, Sparkles, Copy, Check, X } from "lucide-react";
+import "../types/tpyes"
+import axios from "axios";
+import { BASE_API_URL, Chat_Message, PORT } from "../types/tpyes";
+
+
+type Message = { id: number; sender: string; content: string; time: string; isMine: boolean };
+
+// --------------------------
+// API 코드 구현부
+// --------------------------
+
+const createChatRooms = async (team_id : string) => {
+  try {
+    const int_team_id = parseInt(team_id, 10);
+    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/teams/${int_team_id}/rooms`);
+    return res;
+  } catch ( err ) {
+
+  }
+};
+
+const fatchChatRoomsList = async (team_id : string) => {
+  try {
+    
+    const int_team_id = parseInt(team_id, 10);
+    const res = await axios.get(`${BASE_API_URL}:${PORT}/api/teams/${int_team_id}/chat-rooms`);
+    return res.data;
+  } catch ( err ) {
+    
+  }
+};
+
+const fatchLastChatsInRoom = async (room_id : string) => {
+  try {
+    const int_room_id = parseInt(room_id, 10);
+    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/chat-rooms/${int_room_id}/messages`);
+  } catch ( err ) {
+    
+  }
+};
+
+const createAIPromptInRoom = async (chat_message_list : Chat_Message[] ) => {
+  try {
+    if (chat_message_list.length != 0 && chat_message_list[0].room_id != null) {
+      const res = await axios.post(`${BASE_API_URL}:${PORT}/api/chat-rooms/`);
+      return 1;
+    }
+    else {
+      console.log("지금까지 나눈 채팅이 하나도 없어요")
+    }
+  } catch ( err ) {
+    
+  }
+};
+
+
+
+
+const DEMO_PROMPT = `당신은 팀 프로젝트 협업 AI 어시스턴트입니다. 아래 팀 회의 내용을 바탕으로 팀원들을 도와주세요.
+
+---
+
+## 📋 프로젝트 개요
+
+- **주제/서비스**: 캠퍼스 스터디 매칭 플랫폼 "StudyMate"
+- **한 줄 설명**: 대학생들이 스터디 그룹을 쉽게 구성하고, 일정·자료·진도를 함께 관리할 수 있는 웹 서비스
+
+---
+
+## 🎯 문제 상황 및 목적
+
+- **문제**: 기존에는 에브리타임 게시판이나 오픈채팅으로 스터디원을 구하다 보니 매칭 후 관리가 안 되고 흐지부지 해산되는 경우가 많음
+- **목적**: 관심 분야·시간대·학교 기준으로 스터디원을 자동 추천하고, 그룹 내 일정·자료·출석을 한 곳에서 관리
+- **기대 효과**: 스터디 지속률 향상, 학습 성과 공유 활성화
+
+---
+
+## 👥 팀원 및 역할 분담
+
+| 이름 | 역할 | 담당 기능 |
+|------|------|-----------|
+| 박미소 | 팀장 / 기획 | 요구사항 정의, UI 기획, 발표 자료 |
+| 송희경 | 프론트엔드 | React 화면 구현, 컴포넌트 설계 |
+| 고명주 | 백엔드 | Spring Boot API 개발, DB 설계 |
+| 나 (김지우) | 풀스택 | 매칭 알고리즘, 배포(AWS) |
+
+---
+
+## 🛠️ 기술 스택
+
+- **프론트엔드**: React 18, TypeScript, Tailwind CSS
+- **백엔드**: Spring Boot 3, Java 17
+- **데이터베이스**: MySQL 8 (메인), Redis (세션/캐시)
+- **인프라**: AWS EC2 + S3, GitHub Actions CI/CD
+- **협업 도구**: GitHub, Notion, Figma
+
+---
+
+## 📅 일정 및 마감
+
+- **전체 기간**: 2026년 4월 1일 ~ 6월 13일 (약 10주)
+- **주요 마일스톤**:
+  - 4월 2주차: 기획 완료 + 화면 설계(Figma)
+  - 4월 4주차: DB 설계 + API 명세서 작성
+  - 5월 2주차: 핵심 기능 구현 완료 (매칭, 그룹 관리)
+  - 5월 4주차: 통합 테스트 + 버그 수정
+  - 6월 1주차: 최종 발표 준비
+  - **6월 13일**: 최종 발표 및 제출
+
+---
+
+## 💬 대화 요약
+
+총 8개 메시지, 참여자: 박미소, 송희경, 고명주, 나(김지우)
+
+주요 결정 사항:
+1. 프로젝트명 "StudyMate"로 확정
+2. 백엔드는 고명주가 Spring Boot로 진행, 프론트는 송희경이 React 담당
+3. DB는 MySQL 사용하되 Redis 캐싱 추가로 성능 보완하기로 함
+4. 매칭 알고리즘은 태그 기반 유사도 + 시간대 필터 방식으로 구현 예정
+5. 다음 회의는 이번 주 금요일 오후 2시, Figma 초안 가져오기로 함
+
+---
+
+위 정보를 바탕으로 팀이 질문하면 구체적인 도움을 제공해 주세요.`;
 
 export function Chat() {
   const [message, setMessage] = useState("");
