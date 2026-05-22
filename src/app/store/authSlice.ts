@@ -18,11 +18,12 @@ const authSlice = createSlice({
     name: "auth",
     initialState,
     reducers: { 
-        login(state, action: PayloadAction<{ token : string }>) {
+        login(state, action: PayloadAction<{ user_id : string, token : string }>) {
         state.isLoggedIn = true;
         state.token = action.payload.token; // JWT 나중에 여기 저장
 
         localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("userId", action.payload.user_id);
         localStorage.setItem("token", action.payload.token); 
         },
         logout(state) {
@@ -31,6 +32,7 @@ const authSlice = createSlice({
         state.token = null;
 
         localStorage.removeItem("isLoggedIn");
+        localStorage.removeItem("userId");
         localStorage.removeItem("token");
         },
   },

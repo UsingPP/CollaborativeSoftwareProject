@@ -1,77 +1,136 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import axios from "axios";
-import { BASE_API_URL, PORT, EvaluationForm } from "../types/tpyes";
+import api from "../store/api";
+import { useParams } from "react-router";
+import { BASE_API_URL, PORT } from "../types/tpyes";
 
-const evaluateMyProjectTeamMate = async ( eval_teammate_form : EvaluationForm ) => {
+interface EvaluationForm {
+  evaluatee_id: string,
+  score_participation: number,
+  score_responsibility: number,
+  score_communication: number,
+  score_collaboration: number,
+  score_creativity: number,
+  comment: string
+}
+
+interface TeamMember {
+  user_id: string;
+  user_name: string;
+  evaluated: boolean;
+}
+
+const evaluateMyProjectTeamMate = async (team_id: string | undefined, eval_teammate_form: EvaluationForm) => {
+  // request body
+  //{
+  //   "evaluatee_id": string,
+  //   "score_participation": 1,
+  //   "score_responsibility": 1,
+  //   "score_communication": 1,
+  //   "score_collaboration": 1,
+  //   "score_creativity": 1,
+  //   "comment": "string"
+  // }
+
+  if (team_id === undefined) { return; }
   try {
-    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/teams/${eval_teammate_form.team_id}/members/eval-status`, eval_teammate_form);
-    return 1;
-  } catch( error ) {
-
+    const res = await api.post(`/api/teams/${team_id}/evaluations`, eval_teammate_form);
+    return res;
+  } catch (err) {
+    console.error(err);
   }
 };
-const fetchMyTeamMateList = async () => {
+const fetchMyTeamMateList = async (team_id: string | undefined) => {
+  // response body
+  // [
+  //   {
+  //     "user_id": 0,
+  //     "user_name": "string",
+  //     "evaluated": true
+  //   },
+  // ]
+  if (team_id === undefined) { return null; }
   try {
-    // 팀원 중 내가 평가한 사람과 평가하지 않은 사람 구분 조회 => 어떤 형식으로 오는건가요?
-  } catch( error ) {
-
+    const res = await api.get(`/api/teams/${team_id}/evaluations`);
+    console.log(res.data);
+    return res.data;
+  } catch (error) {
+    console.error(error);
+    return null;
   }
 };
 
 export function Evaluation() {
-  const [selectedMember, setSelectedMember] = useState<number | null>(null);
 
-  const teamMembers = [
-    {
-      id: 1,
-      name: "송희경",
-      role: "백엔드 개발",
-      avatar: "송",
-    },
-    {
-      id: 2,
-      name: "고명주",
-      role: "프론트엔드 개발",
-      avatar: "고",
-    },
-    {
-      id: 3,
-      name: "오소원",
-      role: "백엔드 개발",
-      avatar: "오",
-    },
-    {
-      id: 4,
-      name: "민지원",
-      role: "데이터베이스 관리",
-      avatar: "민",
-    },
-    {
-      id: 5,
-      name: "이채현",
-      role: "UI/UX 디자인",
-      avatar: "이",
-    },
-  ];
+  const team_id = useParams().teamId;
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | undefined>(undefined);
 
-  const evaluationCriteria = [
-    { id: 1, name: "참여도", description: "팀 활동에 얼마나 적극적으로 참여했는가" },
-    { id: 2, name: "책임감", description: "맡은 업무를 성실하게 수행했는가" },
-    { id: 3, name: "소통", description: "팀원들과 원활하게 소통했는가" },
-  ];
-
-  const [ratings, setRatings] = useState<{ [key: number]: number }>({
-    1: 0,
-    2: 0,
-    3: 0,
-  });
-
+  const [evaluationform, setEvaluationForm] = useState<EvaluationForm | null>(null);
   const [comment, setComment] = useState("");
 
-  const handleStarClick = (criteriaId: number, rating: number) => {
+  const evaluationCriteria = [
+    { id: "score_participation", name: "참여도", description: "팀 활동에 얼마나 적극적으로 참여했는가" },
+    { id: "score_responsibility", name: "책임감", description: "맡은 업무를 성실하게 수행했는가" },
+    { id: "score_communication", name: "소통", description: "팀원들과 원활하게 소통했는가" },
+    { id: "score_collaboration", name: "소통", description: "팀원들과 원활하게 소통했는가" },
+    { id: "score_creativity", name: "소통", description: "팀원들과 원활하게 소통했는가" },
+  ];
+
+  const [ratings, setRatings] = useState<{ [key: string]: number }>({
+    "score_participation": 0,
+    "score_responsibility": 0,
+    "score_communication": 0,
+    "score_collaboration": 0,
+    "score_creativity": 0,
+  });
+
+  const handleStarClick = (criteriaId: string, rating: number) => {
     setRatings({ ...ratings, [criteriaId]: rating });
   };
+
+  const submitEvaluationForm = async () => {
+    if (selectedTeamMember === undefined) { return; }
+
+    const formData: EvaluationForm = {
+      evaluatee_id: selectedTeamMember.user_id,
+      score_participation: ratings.score_participation,
+      score_responsibility: ratings.score_responsibility,
+      score_communication: ratings.score_communication,
+      score_collaboration: ratings.score_collaboration,
+      score_creativity: ratings.score_creativity,
+      comment: comment
+    };
+
+    setEvaluationForm(formData);
+    await evaluateMyProjectTeamMate(team_id, formData);
+
+    setRatings({
+      "score_participation": 0,
+      "score_responsibility": 0,
+      "score_communication": 0,
+      "score_collaboration": 0,
+      "score_creativity": 0,
+    })
+
+    setSelectedTeamMember(undefined);
+
+    setComment("")
+
+    await getEvaluationTeamMemberList();
+  }
+
+  const getEvaluationTeamMemberList = async () => {
+    const list = await fetchMyTeamMateList(team_id);
+    if (list) {
+      setTeamMembers(list);
+    }
+  }
+
+  useEffect(() => {
+    getEvaluationTeamMemberList();
+  }, [team_id])
 
   return (
     <div className="p-8">
@@ -92,33 +151,41 @@ export function Evaluation() {
           <div className="space-y-3">
             {teamMembers.map((member) => (
               <div
-                key={member.id}
-                onClick={() => setSelectedMember(member.id)}
-                className={`bg-white rounded-3xl shadow-md p-4 cursor-pointer transition-all border ${
-                  selectedMember === member.id
+                key={member.user_id}
+                onClick={() => {
+                  if (!member.evaluated) {
+                    setSelectedTeamMember(member);
+                  }
+                }}
+                className={`bg-white rounded-3xl shadow-md p-4 transition-all border ${member.evaluated ? "opacity-60 cursor-not-allowed border-gray-100" : "cursor-pointer hover:shadow-lg border-amber-100"
+                  } ${selectedTeamMember?.user_id === member.user_id
                     ? "ring-2 ring-amber-500 shadow-lg border-amber-200"
-                    : "hover:shadow-lg border-amber-100"
-                }`}
+                    : ""
+                  }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-500 rounded-full flex items-center justify-center text-white text-lg font-semibold shadow-md">
-                    {member.avatar}
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-semibold shadow-md ${member.evaluated ? "bg-gray-300" : "bg-gradient-to-br from-amber-600 to-orange-500"
+                    }`}>
+                    {member.user_name.charAt(0)}
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900">
-                      {member.name}
+                      {member.user_name}
                     </h3>
-                    <p className="text-sm text-gray-600">{member.role}</p>
+                    <p className="text-sm text-gray-600">{member.user_id}</p>
                   </div>
                 </div>
+
                 <button
-                  className={`w-full px-4 py-2 rounded-full transition-all ${
-                    selectedMember === member.id
+                  disabled={member.evaluated}
+                  className={`w-full px-4 py-2 rounded-full transition-all font-medium ${member.evaluated
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : selectedTeamMember?.user_id === member.user_id
                       ? "bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-md"
                       : "bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 hover:from-amber-100 hover:to-orange-100"
-                  }`}
+                    }`}
                 >
-                  평가하기
+                  {member.evaluated ? "평가 완료" : "평가하기"}
                 </button>
               </div>
             ))}
@@ -127,10 +194,10 @@ export function Evaluation() {
 
         {/* Evaluation Form */}
         <div className="lg:col-span-2">
-          {selectedMember ? (
+          {selectedTeamMember ? (
             <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
               <h2 className="text-lg font-semibold text-gray-900 mb-6">
-                {teamMembers.find((m) => m.id === selectedMember)?.name} 평가
+                {teamMembers.find((m) => m.user_id === selectedTeamMember?.user_id)?.user_name} 평가
               </h2>
 
               {/* Rating Criteria */}
@@ -151,11 +218,10 @@ export function Evaluation() {
                           className="p-1 hover:scale-110 transition-transform"
                         >
                           <Star
-                            className={`w-8 h-8 ${
-                              rating <= (ratings[criteria.id] || 0)
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-gray-300"
-                            }`}
+                            className={`w-8 h-8 ${rating <= (ratings[criteria.id] || 0)
+                              ? "fill-amber-400 text-amber-400"
+                              : "text-gray-300"
+                              }`}
                           />
                         </button>
                       ))}
@@ -182,7 +248,9 @@ export function Evaluation() {
               </div>
 
               {/* Submit Button */}
-              <button className="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-500 text-white rounded-full hover:from-amber-700 hover:to-orange-600 transition-all shadow-md">
+              <button
+                onClick={() => { submitEvaluationForm(); }}
+                className="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-500 text-white rounded-full hover:from-amber-700 hover:to-orange-600 transition-all shadow-md">
                 평가 제출
               </button>
             </div>

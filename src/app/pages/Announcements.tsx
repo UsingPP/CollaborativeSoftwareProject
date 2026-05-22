@@ -112,7 +112,6 @@ const writeAnnouncement = (user_id : string,
 } 
 
 export function Announcements() {
-<<<<<<< HEAD
   const params =  useParams();
   const [announcements, setAnnouncements] = useState<Announcement[]>([
   ]);

@@ -1,199 +1,245 @@
-import { useState } from "react";
-<<<<<<< HEAD
+import { useEffect, useState } from "react";
 import { Send, Search, Phone, Video, Plus, Sparkles, Copy, Check, X } from "lucide-react";
+import { useSelector } from "react-redux";
 import "../types/tpyes"
 import axios from "axios";
+import api from "../store/api";
 import { BASE_API_URL, Chat_Message, PORT } from "../types/tpyes";
-
-
-type Message = { id: number; sender: string; content: string; time: string; isMine: boolean };
+import { useParams } from "react-router";
+import { RootState } from "../store";
 
 // --------------------------
 // API 코드 구현부
 // --------------------------
+interface ChatroomListInfo {
+  id: string,
+  team_id: string,
+  room_name: string,
+  created_at: string,
+  members: any,
 
-const createChatRooms = async (team_id : string) => {
+}
+
+interface Message {
+  id: string,
+  room_id: string,
+  sender_id: string,
+  sender_name: string,
+  message_content: string,
+  created_at: string,
+  isMine?: boolean
+}
+
+const createChatRooms = async (team_id: string | undefined, chat_room_name: string | undefined, member_ids: string[] | undefined) => {
+  if (chat_room_name === undefined || member_ids === undefined) { return; }
   try {
-    const int_team_id = parseInt(team_id, 10);
-    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/teams/${int_team_id}/rooms`);
+    const res = await api.post(`/api/teams/${team_id}/chat-rooms`, { room_name: chat_room_name, member_ids: member_ids });
     return res;
-  } catch ( err ) {
-
+  } catch (err) {
+    console.log(err);
   }
 };
 
-const fatchChatRoomsList = async (team_id : string) => {
+const fatchChatRoomsList = async (team_id: string | undefined) => {
+  if (team_id === undefined) { return []; }
+
   try {
-    
-    const int_team_id = parseInt(team_id, 10);
-    const res = await axios.get(`${BASE_API_URL}:${PORT}/api/teams/${int_team_id}/chat-rooms`);
+    const res = await api.get(`/api/teams/${team_id}/chat-rooms`);
     return res.data;
-  } catch ( err ) {
-    
+  } catch (err) {
+    console.log(err);
+    return [];
   }
 };
 
-const fatchLastChatsInRoom = async (room_id : string) => {
+const fatchChatRoomLogs = async (chat_room_id: string | undefined) => {
+  /*[
+  {
+    "id": 0,
+    "team_id": 0,
+    "room_name": "string",
+    "created_at": "2026-05-19T16:10:44.001Z",
+    "members": []
+  }
+  ]
+  */
+  if (chat_room_id === undefined) { return []; }
+  if (chat_room_id === "0") { return []; }
+
   try {
-    const int_room_id = parseInt(room_id, 10);
-    const res = await axios.post(`${BASE_API_URL}:${PORT}/api/chat-rooms/${int_room_id}/messages`);
-  } catch ( err ) {
-    
-  }
-};
+    const res = await api.get(`/api/chat-rooms/${chat_room_id}/messages`);
+    return res.data;
 
-const createAIPromptInRoom = async (chat_message_list : Chat_Message[] ) => {
+  } catch (err) {
+    console.log(err);
+    return [];
+  }
+}
+
+const postMessage = async (room_id: string, message: string) => {
   try {
-    if (chat_message_list.length != 0 && chat_message_list[0].room_id != null) {
-      const res = await axios.post(`${BASE_API_URL}:${PORT}/api/chat-rooms/`);
-      return 1;
-    }
-    else {
-      console.log("지금까지 나눈 채팅이 하나도 없어요")
-    }
-  } catch ( err ) {
-    
+    const res = await api.post(`/api/chat-rooms/${room_id}/messages`, { room_id: room_id, message: message });
+    return res.status;
+  } catch (err) {
+    console.log(err);
+
+  }
+}
+
+const fetchMyTeamMembers = async (team_id: string | undefined) => {
+
+  ///api/teams/{team_id}/chat-rooms
+  //Create Chat Room
+  //채팅방 생성 — 참여자 선택.
+  //
+  if (team_id === undefined) { return; }
+  try {
+    const res = await api.get(`/api/teams/${team_id}`);
+    //{
+    //   "team": {
+    //     "id": 0,
+    //     "team_name": "string",
+    //     "subject_name": "string",
+    //     "invite_code": "string",
+    //     "status": "string",
+    //     "deadline": "2026-05-19",
+    //     "leader_id": 0,
+    //     "created_at": "2026-05-19T16:10:43.968Z"
+    //   },
+    //   "members": [
+    //     {
+    //       "additionalProp1": {}
+    //     }
+    //   ],
+    //   "latest_notice": {
+    //     "additionalProp1": {}
+    //   },
+    //   "today_tasks": [],
+    //   "progress": 0
+    // }
+
+    console.log(res.data.members);
+    return res.data.members;
+  } catch (err) {
+    return [];
+  }
+}
+
+const createAIPromptInRoom = async (room_id: string | undefined) => {
+  if (room_id === undefined) { return; }
+  if (room_id === "0") { return; }
+
+  try {
+    const res = await api.post(`/api/chat-rooms/${room_id}/ai-prompt`, { room_id: room_id });
+    // return json
+    // { prompt : string}
+
+    return res.data;
+
+  } catch (err) {
+    console.log(err);
+    return null;
   }
 };
 
 
 
 
-const DEMO_PROMPT = `당신은 팀 프로젝트 협업 AI 어시스턴트입니다. 아래 팀 회의 내용을 바탕으로 팀원들을 도와주세요.
 
----
-
-## 📋 프로젝트 개요
-
-- **주제/서비스**: 캠퍼스 스터디 매칭 플랫폼 "StudyMate"
-- **한 줄 설명**: 대학생들이 스터디 그룹을 쉽게 구성하고, 일정·자료·진도를 함께 관리할 수 있는 웹 서비스
-
----
-
-## 🎯 문제 상황 및 목적
-
-- **문제**: 기존에는 에브리타임 게시판이나 오픈채팅으로 스터디원을 구하다 보니 매칭 후 관리가 안 되고 흐지부지 해산되는 경우가 많음
-- **목적**: 관심 분야·시간대·학교 기준으로 스터디원을 자동 추천하고, 그룹 내 일정·자료·출석을 한 곳에서 관리
-- **기대 효과**: 스터디 지속률 향상, 학습 성과 공유 활성화
-
----
-
-## 👥 팀원 및 역할 분담
-
-| 이름 | 역할 | 담당 기능 |
-|------|------|-----------|
-| 박미소 | 팀장 / 기획 | 요구사항 정의, UI 기획, 발표 자료 |
-| 송희경 | 프론트엔드 | React 화면 구현, 컴포넌트 설계 |
-| 고명주 | 백엔드 | Spring Boot API 개발, DB 설계 |
-| 나 (김지우) | 풀스택 | 매칭 알고리즘, 배포(AWS) |
-
----
-
-## 🛠️ 기술 스택
-
-- **프론트엔드**: React 18, TypeScript, Tailwind CSS
-- **백엔드**: Spring Boot 3, Java 17
-- **데이터베이스**: MySQL 8 (메인), Redis (세션/캐시)
-- **인프라**: AWS EC2 + S3, GitHub Actions CI/CD
-- **협업 도구**: GitHub, Notion, Figma
-
----
-
-## 📅 일정 및 마감
-
-- **전체 기간**: 2026년 4월 1일 ~ 6월 13일 (약 10주)
-- **주요 마일스톤**:
-  - 4월 2주차: 기획 완료 + 화면 설계(Figma)
-  - 4월 4주차: DB 설계 + API 명세서 작성
-  - 5월 2주차: 핵심 기능 구현 완료 (매칭, 그룹 관리)
-  - 5월 4주차: 통합 테스트 + 버그 수정
-  - 6월 1주차: 최종 발표 준비
-  - **6월 13일**: 최종 발표 및 제출
-
----
-
-## 💬 대화 요약
-
-총 8개 메시지, 참여자: 박미소, 송희경, 고명주, 나(김지우)
-
-주요 결정 사항:
-1. 프로젝트명 "StudyMate"로 확정
-2. 백엔드는 고명주가 Spring Boot로 진행, 프론트는 송희경이 React 담당
-3. DB는 MySQL 사용하되 Redis 캐싱 추가로 성능 보완하기로 함
-4. 매칭 알고리즘은 태그 기반 유사도 + 시간대 필터 방식으로 구현 예정
-5. 다음 회의는 이번 주 금요일 오후 2시, Figma 초안 가져오기로 함
-
----
-
-위 정보를 바탕으로 팀이 질문하면 구체적인 도움을 제공해 주세요.`;
+const DEMO_PROMPT = ``;
 export function Chat() {
+  const param = useParams();
+  const myUserId = useSelector((state: RootState) => state.auth.userId);
   const [message, setMessage] = useState("");
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [selectedChatRoom, setSelectedChatRoom] = useState<string | undefined>(undefined);
+  const [chat_log, setChatLog] = useState<Message[]>([]);
+  const [chat_room_list, setChatRoomList] = useState<ChatroomListInfo[]>([]);
+  const [myTeamMembers, setMyTeamMembers] = useState<any>([]);
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [newChatRoomName, setNewChatRoomName] = useState("");
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState("");
+  const [copied, setCopied] = useState(false);
 
-  const chats = [
-    {
-      id: 1,
-      name: "팀 전체",
-      lastMessage: "내일 회의 준비 완료했어요!",
-      unread: 2,
-    },
-    {
-      id: 2,
-      name: "개발팀",
-      lastMessage: "API 연동 완료했습니다",
-      unread: 0,
-    },
-    {
-      id: 3,
-      name: "디자인팀",
-      lastMessage: "UI 목업 공유드립니다",
-      unread: 1,
-    },
-  ];
+  const getChatList = async () => {
+    const chat_list = await fatchChatRoomsList(param.teamId);
+    setChatRoomList(chat_list);
 
-  const messages = [
-    {
-      id: 1,
-      sender: "박미소",
-      content: "안녕하세요! 오늘 회의 자료 준비 다 하셨나요?",
-      time: "14:30",
-      isMine: false,
-    },
-    {
-      id: 2,
-      sender: "나",
-      content: "네, 준비 완료했습니다!",
-      time: "14:32",
-      isMine: true,
-    },
-    {
-      id: 3,
-      sender: "송희경",
-      content: "저도 준비 끝났어요. 발표 자료는 자료실에 올려뒀습니다.",
-      time: "14:35",
-      isMine: false,
-    },
-    {
-      id: 4,
-      sender: "고명주",
-      content: "감사합니다! 확인했어요 👍",
-      time: "14:37",
-      isMine: false,
-    },
-    {
-      id: 5,
-      sender: "나",
-      content: "그럼 내일 2시에 뵙겠습니다!",
-      time: "14:40",
-      isMine: true,
-    },
-  ];
+    return chat_list;
+  }
+
+  const getChatLogs = async () => {
+    const chat_logs = await fatchChatRoomLogs(selectedChatRoom);
+    if (chat_logs && chat_logs.length > 0) {
+      const new_chat_logs = chat_logs.map((log: any) => {
+        return {
+          ...log,
+          isMine: String(log.sender_id) === String(myUserId)
+        }
+      })
+      setChatLog(new_chat_logs);
+      return new_chat_logs;
+    } else {
+      setChatLog([]);
+      return [];
+    }
+  }
+
+  const getTeamMembers = async () => {
+    const temp = await fetchMyTeamMembers(param.teamId);
+    setMyTeamMembers(temp);
+  }
+
+  useEffect(() => {
+    getChatList();
+  }, []);
+
+  useEffect(() => {
+    getChatLogs();
+    console.log("change!");
+  }, [selectedChatRoom]);
+
+  useEffect(() => {
+    getTeamMembers();
+  }, [param.teamId]);
 
   const handleSend = () => {
     if (message.trim()) {
-      // 메시지 전송 로직
+      postMessage(selectedChatRoom, message);
       setMessage("");
     }
+  };
+
+  const handleSendCreateTeam = async () => {
+    createChatRooms(param.teamId, newChatRoomName, selectedMembers);
+    getChatList();
+  }
+
+  const handleGenerateAIPrompt = async () => {
+
+    const promptData: { prompt: string } | null = await createAIPromptInRoom(selectedChatRoom);
+    setShowPromptModal(true);
+    setIsGenerating(true);
+    setGeneratedPrompt("");
+    setCopied(false);
+    if (promptData !== null) {
+      setTimeout(() => {
+        setGeneratedPrompt(promptData.prompt);
+        setIsGenerating(false);
+      }, 1200);
+    } else {
+      setGeneratedPrompt("에러가 발생했어요.");
+      setIsGenerating(false);
+    }
+
+  }
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(generatedPrompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -218,31 +264,43 @@ export function Chat() {
           </button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {chats.map((chat) => (
-            <div
-              key={chat.id}
-              className="p-4 border-b border-amber-50 hover:bg-amber-50 cursor-pointer transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
-                  {chat.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-semibold text-gray-900">{chat.name}</h3>
-                    {chat.unread > 0 && (
-                      <span className="bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs px-2 py-1 rounded-full shadow-sm">
-                        {chat.unread}
-                      </span>
-                    )}
+          {
+            chat_room_list.length === 0 ?
+              <div
+                className="flex items-center justify-center py-12 text-sm font-medium text-gray-400 text-center">
+                <h1 className="text-xl text-gray-300"> 아직 생성된 채팅창이 없어요 </h1>
+              </div> :
+              chat_room_list.map((chat) => (
+                <div
+                  key={chat.id}
+                  onClick={() => { setSelectedChatRoom(chat.id); }}
+                  className={`p-4 border-b border-amber-50 cursor-pointer transition-colors ${selectedChatRoom === chat.id ? "bg-amber-100" : "hover:bg-amber-50"}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold shadow-md">
+                      {
+                        //  chat.name.charAt(0)
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start mb-1">
+                        <h3 className="font-semibold text-gray-900">{chat.room_name}</h3>
+                        {//chat.unread > 0 && (
+                          // <span className="bg-gradient-to-r from-amber-600 to-orange-500 text-white text-xs px-2 py-1 rounded-full shadow-sm">
+                          //  {chat.unread}
+                          //</span>
+                          //)
+                        }
+                      </div>
+                      <p className="text-sm text-gray-600 truncate">
+                        {
+                          //chat.lastMessage
+                        }
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 truncate">
-                    {chat.lastMessage}
-                  </p>
                 </div>
-              </div>
-            </div>
-          ))}
+              ))}
         </div>
       </div>
 
@@ -253,14 +311,17 @@ export function Chat() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <span className="text-xl">💬</span>
-              <h2 className="text-xl font-semibold text-gray-900">팀 전체</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {selectedChatRoom !== "0" ? chat_room_list.find((chat) => chat.id === selectedChatRoom)?.room_name : "채팅방을 선택해주세요"}
+              </h2>
             </div>
             <div className="flex gap-2">
-              <button className="p-2 hover:bg-amber-50 rounded-full transition-colors">
-                <Phone className="w-5 h-5 text-amber-700" />
-              </button>
-              <button className="p-2 hover:bg-amber-50 rounded-full transition-colors">
-                <Video className="w-5 h-5 text-amber-700" />
+              <button
+                onClick={handleGenerateAIPrompt}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg hover:from-violet-600 hover:to-purple-700 transition-all shadow-sm text-xs font-medium mr-2"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                AI 프롬프트 생성
               </button>
             </div>
           </div>
@@ -268,30 +329,29 @@ export function Chat() {
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {messages.map((msg) => (
+          {chat_log && chat_log.length != 0 ? chat_log.map((msg) => (
             <div
               key={msg.id}
               className={`flex ${msg.isMine ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-md ${
-                  msg.isMine ? "bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-md" : "bg-white text-gray-900 border border-amber-100 shadow-sm"
-                } rounded-3xl p-4`}
+                className={`max-w-md ${msg.isMine ? "bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-md" : "bg-white text-gray-900 border border-amber-100 shadow-sm"
+                  } rounded-3xl p-4`}
               >
                 {!msg.isMine && (
-                  <p className="text-sm font-semibold mb-1 text-amber-800">{msg.sender}</p>
+                  <p className="text-sm font-semibold mb-1 text-amber-800">{msg.sender_name}</p>
                 )}
-                <p className="mb-1">{msg.content}</p>
+                <p className="mb-1">{msg.message_content}</p>
                 <p
-                  className={`text-xs ${
-                    msg.isMine ? "text-orange-100" : "text-gray-500"
-                  }`}
+                  className={`text-xs ${msg.isMine ? "text-orange-100" : "text-gray-500"
+                    }`}
                 >
-                  {msg.time}
+                  {msg.created_at}
+
                 </p>
               </div>
             </div>
-          ))}
+          )) : null}
         </div>
 
         {/* Message Input */}
@@ -306,7 +366,7 @@ export function Chat() {
               className="flex-1 px-4 py-3 border border-amber-200 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
             <button
-              onClick={handleSend}
+              onClick={() => { handleSend(); getChatLogs(); }}
               className="px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-500 text-white rounded-full hover:from-amber-700 hover:to-orange-600 transition-all flex items-center gap-2 shadow-md"
             >
               <Send className="w-5 h-5" />
@@ -321,7 +381,7 @@ export function Chat() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">새 채팅방 만들기</h2>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 채팅방 이름
@@ -329,6 +389,7 @@ export function Chat() {
               <input
                 type="text"
                 placeholder="예: 프론트엔드팀"
+                onChange={(e) => setNewChatRoomName(e.target.value)}
                 className="w-full px-4 py-2 border border-amber-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
@@ -338,13 +399,13 @@ export function Chat() {
                 참여할 팀원
               </label>
               <div className="space-y-2">
-                {["박미소", "송희경", "고명주", "오소원", "민지원", "이채현"].map((member) => (
-                  <label key={member} className="flex items-center gap-3 p-2 hover:bg-amber-50 rounded-xl cursor-pointer">
+                {myTeamMembers.map((member: any) => (
+                  <label key={member.user_id} className="flex items-center gap-3 p-2 hover:bg-amber-50 rounded-xl cursor-pointer">
                     <input type="checkbox" className="w-4 h-4 text-amber-600 rounded" />
                     <div className="w-8 h-8 bg-gradient-to-br from-amber-600 to-orange-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                      {member.charAt(0)}
+                      {member.name.charAt(0)}
                     </div>
-                    <span className="text-gray-700">{member}</span>
+                    <span className="text-gray-700">{member.name}</span>
                   </label>
                 ))}
               </div>
@@ -358,12 +419,92 @@ export function Chat() {
                 취소
               </button>
               <button
-                onClick={() => setShowNewChatModal(false)}
+                onClick={() => { setShowNewChatModal(false); handleSendCreateTeam(); }}
                 className="flex-1 px-4 py-3 bg-gradient-to-r from-amber-600 to-orange-500 text-white rounded-full hover:from-amber-700 hover:to-orange-600 transition-all shadow-md"
               >
                 만들기
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showPromptModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">AI 프롬프트 생성</h2>
+                  <p className="text-xs text-slate-400">대화 내용을 분석해 프롬프트를 생성했습니다</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPromptModal(false)}
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {isGenerating ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-4">
+                  <div className="relative w-12 h-12">
+                    <div className="absolute inset-0 rounded-full border-4 border-purple-100" />
+                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-slate-700">대화 내용 분석 중...</p>
+                    <p className="text-xs text-slate-400 mt-1">주제, 역할, 기술 스택 등을 추출하고 있어요</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 bg-violet-50 border border-violet-100 rounded-xl px-4 py-3">
+                    <Sparkles className="w-4 h-4 text-violet-500 shrink-0" />
+                    <p className="text-xs text-violet-700">
+                      아래 프롬프트를 복사해서 AI 채팅(ChatGPT, Claude 등)에 붙여넣으면 팀 프로젝트에 맞는 답변을 받을 수 있어요.
+                    </p>
+                  </div>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <pre className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed font-mono">
+                      {generatedPrompt}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {!isGenerating && (
+              <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
+                <button
+                  onClick={() => setShowPromptModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors text-sm"
+                >
+                  닫기
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className={`flex-1 px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 text-sm font-medium shadow-sm ${copied
+                    ? "bg-green-500 text-white"
+                    : "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                    }`}
+                >
+                  {copied ? (
+                    <><Check className="w-4 h-4" />복사 완료!</>
+                  ) : (
+                    <><Copy className="w-4 h-4" />프롬프트 복사</>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
