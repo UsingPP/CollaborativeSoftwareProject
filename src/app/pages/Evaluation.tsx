@@ -131,6 +131,10 @@ export function Evaluation() {
     getEvaluationTeamMemberList();
   }, [team_id])
 
+  const handleStarClick = (criteriaId: number, rating: number) => {
+    setRatings({ ...ratings, [criteriaId]: rating });
+  };
+
   return (
     <div className="p-8">
       <div className="mb-8">
