@@ -1,34 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import axios from 'axios'
+import api from "../store/api";
 import {
   Calendar,
   ListTodo,
   MessageCircle,
   Share2,
   Star,
-  ChevronDown,
-  LogOut,
-  User,
-  Users,
 } from "lucide-react";
 import { useDispatch, UseDispatch, useSelector } from "react-redux";
 import { login, logout } from "../store/authSlice"
 import { RootState } from "../store";
+import { BASE_API_URL, Team, PORT } from "../types/tpyes";
 
 // ────────────────────────────────────────────
 // 타입(임시)
 // ────────────────────────────────────────────
-
-interface Team {
-  id: number;
-  name: string;
-  course: string;
-  members: string[];
-  status: string;
-  progress: number;
-  dueDate: string;
-}
 
 interface CreateTeamParams {
   team_name : string;
@@ -42,12 +29,71 @@ interface CreateTeamParams {
 // API 호출부 & 로그인 관리
 // ────────────────────────────────────────────
 
-const fetchMyteams = async (userId : string | null) : Promise<Team[]> => {
-  // 실제 구현 시 fetch로 교체할 부분
-  await new Promise((resolve) => setTimeout(resolve, 800)); // 로딩 시뮬레이션
+const logInFunction = async (dispatch: any, user_id : string, password : string) => {
+  try{
+    const res = await api.post(`/api/auth/login`, { "email" : `${user_id}`, "password" : `${password}`});
+    if ( res.data.access_token ) {
+        const token = res.data.access_token;
+        dispatch(login({ token }));
+        return 1;
+    }
+    console.log("No exist token");
+    return -1;
+  } catch ( err ) {
+    console.log(`Login Failure`);
+    return -1
 
+  }
+};
+
+export const fetchMyteams = async () : Promise<Team[]> => {
+ try{
+  const res = await api.get(`/api/teams`);
+
+  if (Array.isArray(res.data)) {
+    //console.log(res.data);
+    return res.data;
+  }
+  else {
+    console.log("팀 목록이 없습니다.");
+    return [];
+  }
+} catch (err) {
+  console.log("팀 목록을 서버에서 가져오지 못했습니다.");
   return MY_TEAMS;
 }
+};
+
+const createNewTeam = async (team_info  : Team) => {
+  /* 2-1 새 팀 생성 요청을 보냄
+  require : team name, subject_name, deadline
+  return으로  invite code : string으로
+  */
+  try {
+    const res = await api.post(`/api/teams`, team_info);
+    if (res.data.invite_code) {
+      return res.data.invite_code;
+    }
+    return "";
+  } catch(err) {
+    return "";
+  }
+};
+
+const joinNewTeam = async (team_code  : string) => {
+  /* 2-2 코드로 팀 초대 요청을 전송
+  
+  */
+  try {
+    const res = await api.post(`/api/teams/join`, {"invite_code" : team_code });
+    if (res.status == 201) {
+      return 1;
+    }
+    return -1;
+  } catch(err) {
+    return -1;
+  }
+};
 
 
 // ────────────────────────────────────────────
@@ -56,39 +102,25 @@ const fetchMyteams = async (userId : string | null) : Promise<Team[]> => {
 const MY_TEAMS: Team[] = [
   {
     id: 1,
-    name: "클라우드 컴퓨팅 팀프로젝트",
-    course: "웹프로그래밍",
-    members: ["박미소", "송희경", "고명주", "오소원"],
-    status: "진행중",
-    progress: 65,
-    dueDate: "2026-03-19",
+    subject_name: "클라우드 컴퓨팅 팀프로젝트",
   },
   {
     id: 2,
-    name: "운영체제 팀플",
-    course: "데이터베이스",
-    members: ["민지원", "이채현", "박미소"],
-    status: "진행중",
-    progress: 40,
-    dueDate: "2026-03-25",
+    subject_name: "운영체제 팀플",
   },
   {
     id: 3,
-    name: "쿠피사이트 개발",
-    course: "인공지능",
-    members: ["송희경", "고명주", "민지원", "오소원"],
-    status: "진행중",
-    progress: 80,
-    dueDate: "2026-03-20",
+    subject_name: "쿠피사이트 개발",
+
   },
 ];
 
-const CreateTeamParamsDump = {
+const CreateTeamParamsDump : Team = {
     team_name: "프로젝트 팀 A",
     subject_name: "소프트웨어공학",
     invite_code: "ABC123",
-    deadline: "2025-12-31",
-    leader_id: "1"
+    //deadline: "2025-12-31",
+    leader_id: 1
 }
 
 
@@ -125,7 +157,7 @@ function TeamDropdown({
       >
         <Users className="w-4 h-4 text-blue-500" />
         <span className="max-w-[140px] truncate">
-          {selectedTeam ? selectedTeam.name : "팀 선택"}
+          {selectedTeam ? selectedTeam.subject_name : "팀 선택"}
         </span>
         <ChevronDown
           className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
@@ -157,8 +189,8 @@ function TeamDropdown({
                 selectedTeam?.id === team.id ? "bg-blue-50" : ""
               }`}
             >
-              <p className="text-sm font-semibold text-gray-800 truncate">{team.name}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{team.course}</p>
+              <p className="text-sm font-semibold text-gray-800 truncate">{team.team_name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{team.subject_name}</p>
             </button>
           ))
         )}
@@ -255,13 +287,14 @@ function Header({
 
 function LoginModal({
     closeModal,
-    getTeamList,
 } : {
     closeModal : () => void;
-    getTeamList : () => void;
 }) {
 
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
+    
+  const [user_id, setUserId] = useState("");
+  const [password, setPassword] = useState("");
 
     return (
       <>
@@ -281,18 +314,24 @@ function LoginModal({
             <input
               type="text"
               placeholder="아이디"
+              value={user_id}
+              onChange={(e) => setUserId(e.target.value)}
               className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-3 outline-none focus:border-blue-500"
             />
             <input
               type="password"
               placeholder="비밀번호"
+              value = {password}
+              onChange={(e) => setPassword(e.target.value)}
               className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
             />
 
             <button
               onClick={async () => {
-                dispatch(login({ userId : "userId"}));
-                await getTeamList();
+                if (!user_id || !password) {
+                  return;
+                }
+                logInFunction(dispatch, user_id, password);
                 closeModal(); // 로그인 성공 시 모달 닫기
               }}
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-xl font-medium"
@@ -306,6 +345,164 @@ function LoginModal({
     
 }
 
+function CreateTeamModal( { closeModal} : { closeModal : () => void}) {
+  // 모달 내에 인증 코드를 제출 => 서버에서 검증 후 팀 선택을 개시
+  const [teamData, setTeamData] = useState<Team>({
+    team_name : "",
+    subject_name : "",
+  });
+
+  const [team_name, setTeamName] = useState("");
+  const [subject_name, setSubjectName] = useState("");
+  const [selectedDate, setSelectedDate] = useState<string>("");
+
+  const [invite_code, setInviteCode] = useState("");
+
+  return (
+    <>
+      <div 
+        className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        >
+      </div>
+
+      <div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            onClick={() => closeModal()} // 배경 클릭 시 닫기
+      >
+      { invite_code === "" ? 
+      <>
+          <div
+            className="bg-white rounded-3xl p-8 w-96 shadow-xl"
+            onClick={(e) => e.stopPropagation()} // 모달 내부 클릭 시 닫히지 않게
+          >
+            <input
+              className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
+              placeholder="팀 이름"
+              value={team_name}
+              onChange={(e) => setTeamName(e.target.value)}
+            />
+
+            <input
+              className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
+              placeholder="팀 이름"
+              value={subject_name}
+              onChange={(e) => setSubjectName(e.target.value)}/>
+
+            <div className="flex flex-col gap-2 w-full mb-8 p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+              <label className="text-sm font-semibold text-gray-700">
+                마감일 선택
+              </label>
+
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-4 py-2 border border-blue-200 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-gray-700"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {selectedDate ? `선택한 날짜: ${selectedDate}` : "날짜를 선택해주세요."}
+              </p>
+            </div>
+            <button
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-xl font-medium"
+              onClick={  async () => {
+                const newTeamData = {
+                  team_name : team_name,
+                  subject_name: subject_name, 
+                  deadline: selectedDate
+                }
+
+                setTeamData(newTeamData);
+
+                try {
+                  const result = await createNewTeam(newTeamData);
+
+                  if ( result != "") {
+                    setInviteCode(result);
+                  }
+                  else {}
+                } catch(err) {
+
+                }
+              }
+            }
+            > 
+            전송
+            </button>
+          </div>
+      </> : <>
+      
+        <div
+              className="bg-white rounded-3xl p-8 w-96 shadow-xl"
+              onClick={(e) => e.stopPropagation()} // 모달 내부 클릭 시 닫히지 않게
+            >
+              <h3
+                className="text-gray-500 mb-4"
+              > {teamData.team_name}의 초대 코드 </h3>
+              
+              <h1
+              className="text-3xl font-bold text-gray-900 mb-5"
+              > {invite_code} </h1>
+
+              <button onClick={closeModal}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-xl font-medium"
+            > 확인 </button>
+        </div>
+        </>
+        }
+      
+          
+        </div>
+      </>
+  );
+}
+
+function JoinTeamModal( { closeModal} : { closeModal : () => void}) {
+  // 모달 내에 인증 코드를 제출 => 서버에서 검증 후 팀 선택을 개시
+  const [invite_code, setInviteCode] = useState("");
+  return (
+    <>
+      <div 
+        className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+        >
+      </div>
+      <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => closeModal()} // 배경 클릭 시 닫기
+      >
+          <div
+            className="bg-white rounded-3xl p-8 w-96 shadow-xl"
+            onClick={(e) => e.stopPropagation()} // 모달 내부 클릭 시 닫히지 않게
+          >
+            <h2 className="text-2xl font-bold text-gray-900">
+              초대 코드 입력
+            </h2>
+            <p className="text-gray-400 mb-6"> 참여 팀의 인증 코드를 입력해주세요</p>
+            <input
+              className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
+              placeholder="초대 코드"
+              value={invite_code}
+              onChange={(e) => setInviteCode(e.target.value)}
+            />
+            <button
+            onClick={async () => {
+                if (!invite_code) {
+                  return;
+                }
+                let isClose = await joinNewTeam(invite_code);
+                if (isClose == 1) {
+                  closeModal(); // 성공 시 모달 닫기
+                }
+              }}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-xl font-medium"
+            > 참여하기</button>
+          </div>
+
+      </div>
+    </>
+  );
+}
+
 // ────────────────────────────────────────────
 // 메인 페이지
 // ────────────────────────────────────────────
@@ -317,110 +514,60 @@ export function MainPage() {
   const dispatch = useDispatch();
   //
 
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [showJoinTeamModal, setShowJoinTeamModal] = useState(false);
 
-  const [myTeams, setMyteams] = useState<Team[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isLoadding, setIsLoadding] = useState(false);
+  const [myTeams, setMyTeams] = useState<Team[]>([]);
 
-  // 로그인 시 해당 팀 가져오기 
-const getTeamList = async() => {
-  setIsLoadding(true);
-
-  
-  try {
-    const teams = await fetchMyteams("userId");
-    setMyteams(teams);
-    //dispatch(login({ userId : "userId" }));
-  } catch (error) {
-    console.error("팀 정보를 못 불러왔어요")
-  } finally {
-    setIsLoadding(false)
-  }
-}
-
-// ----------------------
-// 팀 생성 및 참여 동작 코드
-// ----------------------
-
-const createTeam = async(params : CreateTeamParams) => {
-
-/* 코드 동작 목적
-   1. 로그인이 되어 있지 않다면 팀 생성을 멈춘다
-   2. 로그인이 되어 있다면 CreateTeamParams의 Interface대로 JSON을 전송해 팀 생성 요청을 백엔드로 전송한다.
-   3-1. (이후 미구현) 백엔드 단에서 res.staus 가 200이면 팀 초대 코드를 출력한다.
-   3-2. 실패하면 실패 오류를 출력한다.
-*/
-
-  if (!isLoggedIn) { return; }
-  try {
-    const res = await axios.post("http://localhost:3000/api/teams", params);
-    console.log("팀 생성 성공");
-    console.log(res.status);
-  } catch (error) {
-      console.log("팀 생성 실패")
-      if (axios.isAxiosError(error)) {
-      }
-  }
-}
-
-
-const joinTeam = async(params : string) => {
-  /* 코드 동작 목적 (미구현)
-   1. 로그인이 되어 있고, 초대 코드를 담아 서버에 초대 코드를 보내 해당 팀에 넣기를 요청한다.
-   2-1. 백엔드 단에서 res.staus 가 200이면 해당 팀으로 이동한다.
-   2-2. 실패하면 실패 오류를 출력한다.
-*/
-  try {
-    const res = await axios.post("http://localhost:3000/api/teams/join", { invite_code : params }) // <- 어떤 양식으로 보내야 할 지 미정
-  } catch (err) {}
-}
-
-// 실제 서버 상 동작 코드
-/*
-const handleLogin = async() => {
- const response = await fetch("api/login" , {
-  method : "POST",
-  body : JSON.stringfy({id, password});
-
-  if (response.ok) {
-    setIsLoggedIn(true)
-  }
-
-  else {
-    return;
-  }
-
-  const teams = await fetchMyteams(id);
-  setMyteams(teams)
-}
-*/
+  useEffect(() => {
+    if (isLoggedIn) {
+      const loadTeams = async () => {
+        setIsLoadding(true);
+        const myTeamList = await fetchMyteams();
+        setMyTeams(myTeamList);
+        setIsLoadding(false);
+      };
+      loadTeams();
+    }
+    else {
+      setMyTeams([]);
+      setSelectedTeam(null);
+    }
+  }, [isLoggedIn, showCreateTeamModal, showJoinTeamModal]);
 
 
   const featureCards = [
     {
       title: "일정 관리",
       description: "팀 회의와 마감 일정을 한눈에 정리합니다.",
+      to: "/team/schedule",
       icon: <Calendar className="w-6 h-6" />,
     },
     {
       title: "팀 회의",
       description: "회의 일정과 커뮤니케이션을 한 공간에서 진행합니다.",
+      to: "/team/chat",
       icon: <MessageCircle className="w-6 h-6" />,
     },
     {
       title: "업무 분담",
       description: "담당자/마감일/진행 상태로 업무를 추적하세요.",
+      to: "/team/tasks",
       icon: <ListTodo className="w-6 h-6" />,
     },
     {
       title: "자료 공유",
       description: "PPT/문서/PDF 등 팀 자료를 깔끔하게 관리합니다.",
+      to: "/team/files",
       icon: <Share2 className="w-6 h-6" />,
     },
     {
       title: "상호 평가",
       description: "참여도와 소통을 기준으로 팀원을 평가합니다.",
+      to: "/team/evaluation",
       icon: <Star className="w-6 h-6" />,
     },
   ];
@@ -432,19 +579,30 @@ const handleLogin = async() => {
         teams={myTeams}
         selectedTeam={selectedTeam}
         onSelectTeam={setSelectedTeam}
-        onLogout={() => {                      // 실제 구현 시 로그아웃 로직으로 교체
+        onLogout={() => {                      
           dispatch(logout());
-          setSelectedTeam(null);
+          setMyTeams([]);
         }}
-        onLoginClick={() => {setShowLoginModal(true);}}
+        onLoginClick={() => {
+          setShowLoginModal(true);}}
       />
 
       {showLoginModal && (
         <LoginModal
           closeModal={() => setShowLoginModal(false)}
-          getTeamList={getTeamList}
           /> )
       }
+
+      {showCreateTeamModal && (
+        <CreateTeamModal
+          closeModal={() => setShowCreateTeamModal(false)} />
+      )}
+
+
+      {showJoinTeamModal && (
+        <JoinTeamModal
+          closeModal={() => setShowJoinTeamModal(false)} />
+      )}
 
       {/* Hero */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
@@ -460,15 +618,112 @@ const handleLogin = async() => {
           일정 관리부터 자료 공유까지, 팀 프로젝트에 필요한 모든 것을 한곳에서
         </p>
         <div className="flex gap-4 justify-center">
-          <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-full text-lg hover:from-blue-700 hover:to-indigo-600 transition-all shadow-lg hover:shadow-xl">
+          <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-full text-lg hover:from-blue-700 hover:to-indigo-600 transition-all shadow-lg hover:shadow-xl"
+                  onClick={() => {setShowJoinTeamModal(true)}}>
             🐻 팀 찾기
           </button>
-          <button onClick = {() => createTeam(CreateTeamParamsDump)} className="px-8 py-4 bg-white text-blue-700 border-2 border-blue-600 rounded-full text-lg hover:bg-blue-50 transition-colors shadow-md">
+          <button className="px-8 py-4 bg-white text-blue-700 border-2 border-blue-600 rounded-full text-lg hover:bg-blue-50 transition-colors shadow-md"
+                  onClick = {(() => setShowCreateTeamModal(true))}>
             + 팀 만들기
           </button>
         </div>
       </section>
 
+      {/* Feature Cards */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900">주요 기능</h2>
+          <p className="text-gray-600 mt-2">
+            팀 프로젝트에 필요한 일정을 관리하고, 업무를 분담하며, 자료를 공유하세요.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featureCards.map((card) => (
+            <Link
+              key={card.to}
+              to={card.to}
+              className="group bg-white/80 backdrop-blur border border-blue-100 rounded-3xl p-6 shadow-md hover:shadow-xl transition-all hover:-translate-y-1"
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-500 text-white flex items-center justify-center shadow-md">
+                  {card.icon}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-700 transition-colors">
+                    {card.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 mt-2 leading-relaxed">
+                    {card.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span className="font-medium text-blue-700">바로가기</span>
+                <span className="text-blue-500 group-hover:translate-x-0.5 transition-transform">
+                  →
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        {/* (Optional) teams preview: keep placeholder data to avoid empty-state UX */}
+        <div className="mt-12">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">내 팀 한눈에 보기</h2>
+            <Link
+              to="/team"
+              className="text-blue-700 hover:text-blue-900 font-medium"
+            >
+              대시보드로 이동 →
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {myTeams.map((team) => (
+              <Link
+                key={team.id}
+                to="/team"
+                className="bg-white/80 backdrop-blur p-6 rounded-3xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 border border-blue-100"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">
+                      {team.name}
+                    </h3>
+                    <p className="text-sm text-gray-600">{team.course}</p>
+                  </div>
+                  <span className="px-3 py-1 bg-gradient-to-r from-emerald-100 to-green-100 text-green-700 rounded-full text-sm font-medium">
+                    {team.status}
+                  </span>
+                </div>
+
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                    <span>진행률</span>
+                    <span className="text-blue-700 font-medium">
+                      {team.progress}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-blue-100 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all"
+                      style={{ width: `${team.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Calendar className="w-4 h-4 text-blue-600" />
+                  <span>마감: {team.dueDate}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="bg-gradient-to-r from-sky-50 to-indigo-50 mt-20">
