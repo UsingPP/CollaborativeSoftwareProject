@@ -15,11 +15,11 @@ const TEAMS = [
 ];
 
 const THEME_COLORS: Record<string, string> = {
-  blue:    "bg-blue-500",
-  violet:  "bg-violet-500",
+  blue: "bg-blue-500",
+  violet: "bg-violet-500",
   emerald: "bg-emerald-500",
-  rose:    "bg-rose-500",
-  dark:    "bg-slate-600",
+  rose: "bg-rose-500",
+  dark: "bg-slate-600",
 };
 
 export function DashboardLayout() {
@@ -28,29 +28,29 @@ export function DashboardLayout() {
   const { teamId } = useParams();
 
   const { theme, setThemeName } = useTheme();
-  
-  const [ myTeams, setMyteams] = useState<Team[]>([]);
-  
+
+  const [myTeams, setMyteams] = useState<Team[]>([]);
+
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
 
 
   const [showTeamDropdown, setShowTeamDropdown] = useState(false);
-  
-  
+
+
   const menuItems = [
-    { path: `/team/${teamId}`,               icon: Home,          label: "홈" },
-    { path: `/team/${teamId}/announcements`, icon: Bell,          label: "공지사항" },
-    { path: `/team/${teamId}/tasks`,         icon: ListTodo,      label: "업무 관리" },
-    { path: `/team/${teamId}/schedule`,      icon: Calendar,      label: "일정" },
-    { path: `/team/${teamId}/files`,         icon: FolderOpen,    label: "자료실" },
-    { path: `/team/${teamId}/chat`,          icon: MessageCircle, label: "채팅" },
-    { path: `/team/${teamId}/evaluation`,    icon: Star,          label: "상호 평가" },
+    { path: `/team/${teamId}`, icon: Home, label: "홈" },
+    { path: `/team/${teamId}/announcements`, icon: Bell, label: "공지사항" },
+    { path: `/team/${teamId}/tasks`, icon: ListTodo, label: "업무 관리" },
+    { path: `/team/${teamId}/schedule`, icon: Calendar, label: "일정" },
+    { path: `/team/${teamId}/files`, icon: FolderOpen, label: "자료실" },
+    { path: `/team/${teamId}/chat`, icon: MessageCircle, label: "채팅" },
+    { path: `/team/${teamId}/evaluation`, icon: Star, label: "상호 평가" },
   ];
 
 
-  useEffect( () => {
+  useEffect(() => {
     const fatchTeams = async () => {
-    try {
+      try {
         const teams = await fetchMyteams();
         setMyteams(teams);
 
@@ -59,18 +59,18 @@ export function DashboardLayout() {
         if (currentTeam) {
           setSelectedTeam(currentTeam);
         }
-      } catch ( err ) {}
+      } catch (err) { }
     };
     fatchTeams();
   }, [teamId]
   );
-  
-if (!selectedTeam) {
-  return <div className="p-8 text-center text-slate-500">데이터를 불러오는 중입니다...</div>;
-}
+
+  if (!selectedTeam) {
+    return <div className="p-8 text-center text-slate-500">데이터를 불러오는 중입니다...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
+    <div className="h-screen bg-slate-50 flex overflow-hidden">
       <aside className="w-60 bg-white border-r border-slate-200 flex flex-col shadow-sm shrink-0">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-slate-100">
@@ -98,24 +98,23 @@ if (!selectedTeam) {
           {showTeamDropdown && (
             <div className="absolute left-3 right-3 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1">
               {
-              myTeams.map(team => (
-                <button
-                  key={team.id}
-                  type="button"
-                  onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); navigate(`/team/${team.id}`) }}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
-                    selectedTeam.id === team.id
-                      ? `${theme.bgLight} ${theme.textDark} font-medium`
-                      : "text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {selectedTeam.id === team.id
-                    ? <Check className={`w-3.5 h-3.5 shrink-0 ${theme.textAccent}`} />
-                    : <span className="w-3.5 shrink-0" />
-                  }
-                  <span>{team.subject_name}</span>
-                </button>
-              ))}
+                myTeams.map(team => (
+                  <button
+                    key={team.id}
+                    type="button"
+                    onClick={() => { setSelectedTeam(team); setShowTeamDropdown(false); navigate(`/team/${team.id}`) }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${selectedTeam.id === team.id
+                        ? `${theme.bgLight} ${theme.textDark} font-medium`
+                        : "text-slate-600 hover:bg-slate-50"
+                      }`}
+                  >
+                    {selectedTeam.id === team.id
+                      ? <Check className={`w-3.5 h-3.5 shrink-0 ${theme.textAccent}`} />
+                      : <span className="w-3.5 shrink-0" />
+                    }
+                    <span>{team.subject_name}</span>
+                  </button>
+                ))}
             </div>
           )}
         </div>
@@ -130,9 +129,8 @@ if (!selectedTeam) {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${
-                      isActive ? theme.navActive : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                    }`}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm ${isActive ? theme.navActive : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
                   >
                     <Icon className={`w-4 h-4 shrink-0 ${isActive ? theme.navActiveIcon : "text-slate-400"}`} />
                     <span>{item.label}</span>
@@ -156,11 +154,10 @@ if (!selectedTeam) {
                 type="button"
                 onClick={() => setThemeName(name)}
                 title={themes[name].label}
-                className={`w-5 h-5 rounded-full ${colorClass} transition-all ${
-                  theme.name === name
+                className={`w-5 h-5 rounded-full ${colorClass} transition-all ${theme.name === name
                     ? "ring-2 ring-offset-2 ring-slate-400 scale-110"
                     : "opacity-60 hover:opacity-100 hover:scale-110"
-                }`}
+                  }`}
               />
             ))}
           </div>

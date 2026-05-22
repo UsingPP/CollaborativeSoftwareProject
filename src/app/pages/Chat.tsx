@@ -117,8 +117,6 @@ const fetchMyTeamMembers = async (team_id: string | undefined) => {
     //   "today_tasks": [],
     //   "progress": 0
     // }
-
-    console.log(res.data.members);
     return res.data.members;
   } catch (err) {
     return [];
@@ -132,7 +130,7 @@ const createAIPromptInRoom = async (room_id: string | undefined) => {
   try {
     const res = await api.post(`/api/chat-rooms/${room_id}/ai-prompt`, { room_id: room_id });
     // return json
-    // { prompt : string}
+    // { prompt : string} 
 
     return res.data;
 
@@ -198,7 +196,6 @@ export function Chat() {
 
   useEffect(() => {
     getChatLogs();
-    console.log("change!");
   }, [selectedChatRoom]);
 
   useEffect(() => {
