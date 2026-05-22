@@ -1,37 +1,71 @@
 import { Calendar, CheckCircle2, FileText, Pin } from "lucide-react";
+import api from "../store/api";
+import { useParams } from "react-router";
+import { useState, useEffect } from "react";
+
+
+
+
+
+
+const fetchDashboardInfomation = async (teamId: string) => {
+  try {
+    const res = await api.get(`/api/teams/${teamId}`);
+    /*
+    {
+  "team": {
+    "id": 0,
+    "team_name": "string",
+    "subject_name": "string",
+    "invite_code": "string",
+    "status": "string",
+    "deadline": "2026-05-19",
+    "leader_id": 0,
+    "created_at": "2026-05-19T16:10:43.968Z"
+  },
+  "members": [
+    {
+      "additionalProp1": {}
+    }
+  ],
+  "latest_notice": {
+    "additionalProp1": {}
+  },
+  "today_tasks": [],
+  "progress": 0
+}
+    */
+    return res.data;
+  } catch (err) {
+    console.error("Failed to fetch dashboard information", err);
+    return null;
+  }
+}
+
 export function Dashboard() {
-  const todayTasks = [
-    { id: 1, task: "UI 디자인 초안 제출", time: "14:00", assignee: "박미소" },
-    { id: 2, task: "팀 회의", time: "16:00", assignee: "전체" },
-    { id: 3, task: "보고서 1차 피드백", time: "18:00", assignee: "송희경" },
-  ];
 
-  const ongoingTasks = [
-    { id: 1, task: "프론트엔드 개발", progress: 60, assignee: "고명주" },
-    { id: 2, task: "백엔드 API 설계", progress: 40, assignee: "오소원" },
-    { id: 3, task: "데이터 분석", progress: 80, assignee: "민지원" },
-  ];
+  const params = useParams();
+  const teamId = params.teamId as string;
+  const [teamName, setTeamName] = useState<string>("");
+  const [subject_name, setSubject_name] = useState<string>("");
+  const [announcement, setAnnouncement] = useState({});
+  const [todaySchedule, setTodaySchedule] = useState([]);
+  const [ongoingTask, setOngoingTask] = useState<number>(0);
 
-  const recentFiles = [
-    {
-      id: 1,
-      name: "프로젝트 계획서.pptx",
-      uploader: "박미소",
-      date: "2026-03-14",
-    },
-    {
-      id: 2,
-      name: "요구사항 정의서.pdf",
-      uploader: "송희경",
-      date: "2026-03-13",
-    },
-    {
-      id: 3,
-      name: "회의록_0312.docx",
-      uploader: "고명주",
-      date: "2026-03-12",
-    },
-  ];
+  const getDashboardInfo = async () => {
+    const data = await fetchDashboardInfomation(teamId);
+    if (data) {
+      setTeamName(data.team.team_name);
+      setSubject_name(data.team.subject_name);
+      setAnnouncement(data.latest_notice);
+      setTodaySchedule(data.today_tasks);
+      setOngoingTask(data.progress);
+    }
+  }
+
+  useEffect(() => {
+    getDashboardInfo();
+  }, []);
 
   return (
     <div className="p-8">
@@ -39,9 +73,9 @@ export function Dashboard() {
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-2xl">🐻</span>
-          <h1 className="text-3xl font-bold text-gray-900">웹 개발 프로젝트</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{subject_name}</h1>
         </div>
-        <p className="text-gray-600 mt-1">Team Alpha</p>
+        <p className="text-gray-600 mt-1">{teamName}</p>
       </div>
 
       {/* Important Announcement */}
@@ -50,11 +84,10 @@ export function Dashboard() {
           <Pin className="w-5 h-5 text-amber-700 mt-1" />
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900 mb-2">
-              [중요] 이번 주 금요일 최종 발표
+              [중요] {announcement.title}
             </h3>
             <p className="text-gray-700">
-              최종 발표가 3월 19일(금) 오후 2시에 예정되어 있습니다. 발표 자료는
-              목요일까지 완성해주세요.
+              {announcement.content}
             </p>
             <p className="text-sm text-gray-600 mt-2">작성자: 김민수 · 2026-03-15</p>
           </div>
@@ -70,7 +103,7 @@ export function Dashboard() {
             <h2 className="text-lg font-semibold text-gray-900">오늘 일정</h2>
           </div>
           <div className="space-y-3">
-            {todayTasks.map((task) => (
+            {todaySchedule.map((task) => (
               <div
                 key={task.id}
                 className="pb-3 border-b border-amber-50 last:border-0"

@@ -1,10 +1,11 @@
 import axios from "axios";
-import { BASE_API_URL, PORT } from "../types/tpyes";
 
-const api = axios.create({ 
-    baseURL : `${BASE_API_URL}:${PORT}`,
-    headers : {
-        "Content-Type" : 'application/json',
+const serverUrl = import.meta.env.VITE_SERVER_URL;
+
+const api = axios.create({
+    baseURL: serverUrl,
+    headers: {
+        "Content-Type": 'application/json',
     },
 })
 
