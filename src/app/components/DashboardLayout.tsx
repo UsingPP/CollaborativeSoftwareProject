@@ -47,11 +47,17 @@ export function DashboardLayout() {
     { path: `/team/${teamId}/evaluation`, icon: Star, label: "상호 평가" },
   ];
 
+  
+  const dumpTeams : Team[] = [ {id : 1, subject_name : "1번 과목"}, {id : 2, subject_name : "2번 과목"} ];
 
   useEffect(() => {
     const fatchTeams = async () => {
       try {
         const teams = await fetchMyteams();
+        console.log(teams);
+        if (teams.length === 0) {
+          throw new Error("에러가 발생했습니다!");
+        }
         setMyteams(teams);
 
         const currentTeam = teams.find(team => String(team.id) === String(teamId));
@@ -59,15 +65,21 @@ export function DashboardLayout() {
         if (currentTeam) {
           setSelectedTeam(currentTeam);
         }
-      } catch (err) { }
+      } catch (err) { 
+        console.log(1);
+        setMyteams(dumpTeams);
+        const currentTeam =  dumpTeams[0];
+        setSelectedTeam(currentTeam);
+       }
     };
     fatchTeams();
   }, [teamId]
   );
 
-  if (!selectedTeam) {
-    return <div className="p-8 text-center text-slate-500">데이터를 불러오는 중입니다...</div>;
-  }
+
+   if (!selectedTeam) {
+     return <div className="p-8 text-center text-slate-500">데이터를 불러오는 중입니다...</div>; 
+   }
 
   return (
     <div className="h-screen bg-slate-50 flex overflow-hidden">
@@ -179,6 +191,7 @@ export function DashboardLayout() {
           </Link>
         </div>
       </aside>
+      
 
       <main className="flex-1 overflow-auto">
         <Outlet />

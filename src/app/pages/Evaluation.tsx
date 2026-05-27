@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
-import axios from "axios";
 import api from "../store/api";
 import { useParams } from "react-router";
-import { BASE_API_URL, PORT } from "../types/tpyes";
 
 interface EvaluationForm {
   evaluatee_id: string,

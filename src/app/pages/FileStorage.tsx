@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { Upload, Download, FileText, Presentation, File, Trash2, X } from "lucide-react";
+import { useParams } from "react-router"; 
 
+// 자료실 파일 개체 데이터 세부 사양 인터페이스
 interface ReferenceFile {
   id: number;
   name: string;
@@ -13,15 +15,22 @@ interface FileStorageProps {
   teamId?: string;
 }
 
-export function FileStorage({ teamId = "3" }: FileStorageProps) {
-  // 로컬 환경 기준 설정
-  const BASE_URL = "http://127.0.0.1:8000"; 
+export function FileStorage({ teamId: propsTeamId }: FileStorageProps) {
+  // 2. URL 파라미터에서 team_id를 추출 (다른 컴포넌트 구조와 동기화)
+  const { team_id: routeTeamId } = useParams<{ team_id: string }>();
   
-  // 임시 Bearer 토큰
+  // Props로 전달받은 값이 있으면 그것을 쓰고, 없으면 URL 파라미터를 사용 (기본값 "3")
+  const teamId = propsTeamId || routeTeamId || "3";
+
+  // 환경 변수(.env)에서 엔드포인트 URL 동적 주입
+  const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || "http://localhost:8000";
+  
+  // 백엔드 요청 인가 처리를 위한 액세스 토큰 선언
   const ACCESS_TOKEN = "your_actual_bearer_token_here";
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 컴포넌트 내 주요 내부 상태 배열 관리자 정의
   const [files, setFiles] = useState<ReferenceFile[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -29,7 +38,7 @@ export function FileStorage({ teamId = "3" }: FileStorageProps) {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  // 공통 인증 헤더 구성 함수 (useCallback으로 메모이제이션하여 안정성 확보)
+  // 네트워크 인가 공통 요청 헤더 정의 맵핑 함수 생성 (useCallback 구조 설계)
   const getAuthHeaders = useCallback((contentType?: string) => {
     const headers: Record<string, string> = {
       "Authorization": `Bearer ${ACCESS_TOKEN}`,
@@ -40,232 +49,211 @@ export function FileStorage({ teamId = "3" }: FileStorageProps) {
     return headers;
   }, [ACCESS_TOKEN]);
 
+  // 업로드된 파일 확장자 종류를 스캔하여 해당하는 테마 디자인 아이콘을 반환하는 유틸 함수
   const getFileIcon = (fileName: string) => {
-    const extension = fileName.split(".").pop()?.toLowerCase();
-    switch (extension) {
-      case "pptx": case "ppt":
-        return <Presentation className="w-8 h-8 text-orange-600" />;
-      case "pdf": case "docx": case "doc": case "txt":
-        return <FileText className="w-8 h-8 text-blue-600" />;
-      case "png": case "jpg": case "jpeg": case "gif":
-        return <File className="w-8 h-8 text-red-600" />;
-      default:
-        return <FileText className="w-8 h-8 text-gray-600" />;
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    if (ext === "pdf" || ext === "docx" || ext === "txt") {
+      return <FileText className="w-8 h-8 text-rose-500 shrink-0" />;
     }
+    if (ext === "pptx" || ext === "ppt") {
+      return <Presentation className="w-8 h-8 text-amber-500 shrink-0" />;
+    }
+    return <File className="w-8 h-8 text-blue-500 shrink-0" />;
   };
 
-  // 1. 자료 목록 조회 (GET) - useCallback 적용으로 무한 루프 방지
-  const fetchReferences = useCallback(async (signal?: AbortSignal) => {
+  // 백엔드 파일 라우터로부터 저장 문서 레코드 로드 기능 수행 (GET)
+  const fetchUploadedFiles = useCallback(async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${BASE_URL}/api/teams/${teamId}/references`, {
+      const res = await fetch(`${API_BASE_URL}/api/teams/${teamId}/files`, {
         method: "GET",
         headers: getAuthHeaders(),
-        signal,
       });
-      if (!response.ok) throw new Error("자료 목록을 불러오지 못했습니다.");
 
-      const data = await response.json();
+      if (!res.ok) throw new Error("스토리지 인덱스 응답 오류 발생");
+      const data = await res.json();
       setFiles(data);
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
-        console.error("Error fetching references:", error);
-      }
+    } catch (error) {
+      console.error("클라우드 공유 파일 목록 패치 실패 에러:", error);
     } finally {
       setIsLoading(false);
     }
-  }, [BASE_URL, teamId, getAuthHeaders]);
+  }, [API_BASE_URL, teamId, getAuthHeaders]);
 
+  useEffect(() => {
+    fetchUploadedFiles();
+  }, [fetchUploadedFiles]);
+
+  // 대화상자 모달 폼 소거 처리 및 선택 초기화
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // 로컬 파일 피кер 로딩 유효성 수신 검사
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const fileList = e.target.files;
-    if (fileList && fileList.length > 0) {
-      setSelectedFile(fileList[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
     }
   };
 
-  // 2. 자료 업로드 제출 (POST)
+  // 멀티파트 형식 데이터셋 전송 파일 영구 인가 핸들러 (POST)
   const handleFileUploadSubmit = async () => {
     if (!selectedFile) return;
 
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
     try {
       setIsUploading(true);
-
-      const requestBody = {
-        file_name: selectedFile.name,
-        file_url: `https://supabase-storage-url.com/v1/obj/public/refs/${encodeURIComponent(selectedFile.name)}`
-      };
-
-      const response = await fetch(`${BASE_URL}/api/teams/${teamId}/references`, {
+      const res = await fetch(`${API_BASE_URL}/api/teams/${teamId}/files`, {
         method: "POST",
-        headers: getAuthHeaders("application/json"),
-        body: JSON.stringify(requestBody),
+        headers: getAuthHeaders(), // 브라우저가 boundary값을 수동 계산하도록 강제 처리하기 위해 컨텐츠 타입 미지정
+        body: formData,
       });
 
-      if (!response.ok) throw new Error("파일 업로드에 실패했습니다.");
-
-      alert("파일이 성공적으로 업로드되었습니다.");
+      if (!res.ok) throw new Error("엔드포인트 미승인 응답 발생");
+      
+      alert("파일이 성공적으로 클라우드에 업로드되었습니다!");
       closeModal();
-      fetchReferences(); 
+      fetchUploadedFiles();
     } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("업로드 중 오류가 발생했습니다.");
+      console.error("서버 데이터 파싱 스트림 장애 디버그:", error);
+      alert("파일 업로드 도중 오류가 발생했습니다.");
     } finally {
       setIsUploading(false);
     }
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  // 3. 자료 삭제 (DELETE)
-  const handleDeleteFile = async (refId: number) => {
-    if (!confirm("정말 이 자료를 삭제하시겠습니까?")) return;
+  // 기존 등록 리소스 영구 파기 수행 요청 통신 핸들러 (DELETE)
+  const handleFileResourceDelete = async (fileId: number) => {
+    if (!window.confirm("선택한 보관 파일을 스토리지에서 영구히 삭제하시겠습니까?")) return;
 
     try {
-      const response = await fetch(`${BASE_URL}/api/references/${refId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/files/${fileId}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
 
-      if (response.ok) {
-        alert("자료가 성공적으로 삭제되었습니다.");
-        setFiles((prev) => prev.filter((file) => file.id !== refId));
-      } else {
-        alert("삭제 권한이 없거나 오류가 발생했습니다.");
-      }
+      if (!res.ok) throw new Error("삭제 쿼리 프로세스 가동 실패");
+      
+      setFiles((prev) => prev.filter((f) => f.id !== fileId));
+      alert("리소스가 스토리지에서 완벽히 삭제되었습니다.");
     } catch (error) {
-      console.error("Error deleting reference:", error);
-      alert("삭제 요청 중 오류가 발생했습니다.");
+      console.error("파일 무결성 인가 파기 제어 장애 발생:", error);
+      alert("파일 삭제 요청 중 에러가 발생했습니다.");
     }
   };
 
-  // 의존성 배열에 fetchReferences를 안전하게 주입하여 불필요한 재호출 및 린트 에러 방지
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchReferences(controller.signal);
-
-    return () => {
-      controller.abort();
-    };
-  }, [fetchReferences]);
-
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "unset";
-    }
-    return () => {
-      document.body.style.overflow = "unset";
-    };
-  }, [isModalOpen]);
-
   return (
     <div className="p-8">
-      {/* 상단 헤더 영역 */}
-      <div className="mb-8 flex justify-between items-center">
+      <div className="flex justify-between items-center mb-8">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-2xl">📁</span>
-            <h1 className="text-3xl font-bold text-gray-900">자료실 (References)</h1>
+            <span className="text-2xl">📂</span>
+            <h1 className="text-3xl font-bold text-gray-900">자료실 (File Storage)</h1>
           </div>
-          <p className="text-gray-600 mt-1">팀 자료를 업로드하고 관리하세요</p>
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-3 bg-gradient-to-r from-amber-600 to-orange-500 text-white rounded-full hover:from-amber-700 hover:to-orange-600 transition-all flex items-center gap-2 shadow-md font-medium"
+          className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-2xl shadow-md hover:opacity-95 transition-all text-sm"
         >
           <Upload className="w-4 h-4" />
           파일 업로드
         </button>
       </div>
 
-      {/* 메인 리스트 */}
-      <div className="grid grid-cols-1 gap-4">
-        {isLoading ? (
-          <div className="text-center py-12 text-gray-500">자료를 불러오는 중입니다...</div>
-        ) : files.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 border-2 border-dashed border-amber-100 rounded-3xl bg-gray-50/30">
-            업로드된 자료가 없습니다. 첫 번째 파일을 공유해보세요!
+      {isLoading ? (
+        <div className="text-center py-20 text-gray-500 font-medium">원격 클라우드 저장소 파일 동기화 중...</div>
+      ) : files.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-dashed border-amber-200 p-16 text-center shadow-sm">
+          <File className="w-12 h-12 text-amber-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">자료실에 등록된 파일이 없습니다.</p>
+          <p className="text-xs text-gray-400 mt-1">우측 상단 버튼을 통해 첫 번째 공유 파일을 업로드해보세요.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl shadow-md border border-amber-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-amber-50/50 border-b border-amber-100 text-gray-700 font-semibold text-sm">
+                  <th className="p-4 pl-6">파일명</th>
+                  <th className="p-4">올린 이</th>
+                  <th className="p-4">등록 일자</th>
+                  <th className="p-4 pr-6 text-right">작업</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-amber-50 text-gray-700 text-sm">
+                {files.map((file) => (
+                  <tr key={file.id} className="hover:bg-amber-50/20 transition-colors">
+                    <td className="p-4 pl-6 font-medium text-gray-900">
+                      <div className="flex items-center gap-3 max-w-md">
+                        {getFileIcon(file.name)}
+                        <span className="truncate" title={file.name}>{file.name}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 font-medium">{file.uploader}</td>
+                    <td className="p-4 text-gray-500">{file.date}</td>
+                    <td className="p-4 pr-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={file.url}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
+                          title="다운로드"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                        <button
+                          onClick={() => handleFileResourceDelete(file.id)}
+                          className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors"
+                          title="삭제"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          files.map((file) => (
-            <div
-              key={file.id}
-              className="bg-white rounded-3xl shadow-md p-6 hover:shadow-lg transition-all border border-amber-100"
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0">{getFileIcon(file.name)}</div>
-                
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 mb-1 truncate">
-                    {file.name}
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
-                    <span>{file.uploader || "익명"}</span>
-                    <span>·</span>
-                    <span>{file.date || "날짜 정보 없음"}</span>
-                  </div>
-                </div>
+        </div>
+      )}
 
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2 bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 rounded-full hover:from-amber-200 hover:to-orange-200 transition-all flex items-center gap-2 text-sm font-medium"
-                  >
-                    <Download className="w-4 h-4" />
-                    다운로드
-                  </a>
-                  <button
-                    onClick={() => handleDeleteFile(file.id)}
-                    className="p-2 text-gray-400 hover:text-rose-600 rounded-full hover:bg-rose-50 transition-colors"
-                    title="파일 삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* 모달 창 */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={closeModal}>
-          <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl border border-gray-100 relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={closeModal} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-xl hover:bg-gray-50 transition-colors">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-amber-100 relative">
+            <button onClick={closeModal} disabled={isUploading} className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100">
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 mb-4">
-              <div className="p-2 bg-amber-50 text-amber-800 rounded-2xl">
-                <Upload className="w-5 h-5" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900">새 자료 업로드</h3>
-            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+              <Upload className="w-5 h-5 text-amber-600" />
+              공유 파일 업로드
+            </h2>
+            <p className="text-xs text-gray-500 mb-6">팀원들과 원격으로 영구 공유할 프로젝트 파일을 로컬 디바이스에서 선택하세요.</p>
 
-            <div className="space-y-4 mb-6">
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-              
+            <div className="mb-6">
               {!selectedFile ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed border-amber-200 hover:border-amber-400 rounded-2xl p-8 text-center cursor-pointer bg-amber-50/30 hover:bg-amber-50/60 transition-all group">
-                  <FileText className="w-10 h-10 text-amber-600/60 group-hover:text-amber-600 mx-auto mb-2 transition-colors" />
-                  <p className="text-sm font-medium text-gray-700">클릭하여 파일 선택</p>
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-amber-200 hover:border-amber-400 rounded-2xl p-8 text-center cursor-pointer bg-amber-50/20 hover:bg-amber-50/40 transition-all group"
+                >
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                  <Upload className="w-8 h-8 text-amber-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                  <p className="text-sm font-semibold text-amber-800">클릭하여 파일 탐색기 열기</p>
+                  <p className="text-xs text-gray-400 mt-1">파일의 단일 업로드 용량 제한은 최대 50MB입니다.</p>
                 </div>
               ) : (
                 <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3 min-w-0">
                     {getFileIcon(selectedFile.name)}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{selectedFile.name}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate" title={selectedFile.name}>{selectedFile.name}</p>
                       <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                   </div>
@@ -276,9 +264,7 @@ export function FileStorage({ teamId = "3" }: FileStorageProps) {
 
             <div className="flex gap-3 justify-end">
               <button onClick={closeModal} disabled={isUploading} className="px-4 py-2.5 rounded-2xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">취소</button>
-              <button onClick={handleFileUploadSubmit} disabled={!selectedFile || isUploading} className="px-5 py-2.5 rounded-2xl text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:opacity-95 disabled:opacity-40">
-                {isUploading ? "등록 중..." : "전송하기"}
-              </button>
+              <button onClick={handleFileUploadSubmit} disabled={!selectedFile || isUploading} className="px-5 py-2.5 rounded-2xl text-sm font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:opacity-95 disabled:opacity-40 transition-all">{isUploading ? "업로드 중..." : "파일 제출"}</button>
             </div>
           </div>
         </div>

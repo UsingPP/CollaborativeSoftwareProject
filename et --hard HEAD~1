@@ -1,0 +1,178 @@
+[33mcommit 74837d1f5c3b966faa87cb8b47bc2570e805b194[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmerge-login-123[m[33m)[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Fri May 22 18:51:31 2026 +0900
+
+    Revert "Add files via upload"
+    
+    This reverts commit c52806c8ebc66483486c04a3eee6f035c0618033.
+
+[33mcommit fd77dfb403890697ca8d9a8b9803eb6f3dadc7b0[m[33m ([m[1;31morigin/merge-login-123[m[33m)[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Fri May 22 18:23:42 2026 +0900
+
+    save
+
+[33mcommit 9e4a1d65b45eb9f66e0986eb0a963c09067c0420[m
+Merge: d78f25e f44dcb0
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Fri May 22 18:19:20 2026 +0900
+
+    Merge branch 'merge-login-123' of https://github.com/UsingPP/CollaborativeSoftwareProject into merge-login-123
+
+[33mcommit d78f25e637022e62fd02c51ee22386d9498890d9[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Fri May 22 18:10:02 2026 +0900
+
+    save
+
+[33mcommit f44dcb0bb211d89d3e90e2a69804ec1c4a1c0d6e[m
+Merge: 2350f3a 22f9a74
+Author: clyxn <162393259+clyxn@users.noreply.github.com>
+Date:   Fri May 22 16:24:31 2026 +0900
+
+    Merge branch 'merge-login-schedue' into merge-login-123
+
+[33mcommit 22f9a743f03d269f0a5d4c8d8a1f04011e60c9d5[m
+Merge: 673fc65 e3edea1
+Author: clyxn <162393259+clyxn@users.noreply.github.com>
+Date:   Fri May 22 16:19:05 2026 +0900
+
+    123
+    
+    123
+
+[33mcommit e3edea1755fe308da01021ca9fd82440e1fa2fc1[m[33m ([m[1;31morigin/login[m[33m)[m
+Merge: b20f270 0715161
+Author: clyxn <162393259+clyxn@users.noreply.github.com>
+Date:   Fri May 22 16:09:06 2026 +0900
+
+    Merge branch 'Schedule' into login
+
+[33mcommit 0715161a5ac9104c2a21cb8f6027db45468ff720[m
+Author: clyxn <162393259+clyxn@users.noreply.github.com>
+Date:   Fri May 22 15:56:45 2026 +0900
+
+    Add files via upload
+
+[33mcommit c52806c8ebc66483486c04a3eee6f035c0618033[m
+Author: clyxn <162393259+clyxn@users.noreply.github.com>
+Date:   Fri May 22 15:55:25 2026 +0900
+
+    Add files via upload
+
+[33mcommit 2350f3ace87d65346b200d38bf4741374b0b4128[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Fri May 22 13:54:58 2026 +0900
+
+    Side Bar Fix
+
+[33mcommit fc58d38e75b0c1c0058fcba775a2f2026d0e1829[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Fri May 22 13:40:29 2026 +0900
+
+    Part Complete
+
+[33mcommit d132ea42cda6ff92d9bf6d616b89698ff387923d[m
+Merge: 1e3fba3 634cbf1
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Wed May 20 23:38:05 2026 +0900
+
+    merge compleite
+
+[33mcommit 634cbf1f4e8ea1452c10efd28116c18810d3a32e[m[33m ([m[1;31morigin/123[m[33m)[m
+Author: clyxn <162393259+clyxn@users.noreply.github.com>
+Date:   Wed May 20 23:02:24 2026 +0900
+
+    Add files via upload
+
+[33mcommit 1e3fba3aa11b8509f0b0c9b6bfb5ed822e4852b9[m
+Merge: b20f270 a7701d0
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Wed May 20 22:34:56 2026 +0900
+
+    Merge remote-tracking branch 'origin/123' into merge-login-123
+
+[33mcommit b20f27081ab7377d44a9f027abb329d4a00c94c1[m[33m ([m[1;32mlogin[m[33m)[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Wed May 20 22:29:13 2026 +0900
+
+    save
+
+[33mcommit a7701d0357cf8843fa047ff2e3b5841a55b029e7[m
+Author: clyxn <162393259+clyxn@users.noreply.github.com>
+Date:   Wed May 20 22:21:58 2026 +0900
+
+    Add files via upload
+
+[33mcommit 5fb960db61beb7de883c3bc7efca1e37464310de[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Wed May 20 19:36:02 2026 +0900
+
+    Profile Complite
+
+[33mcommit 9771cd87f038c70764bb4be9617ee88a1058ff37[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Wed May 20 16:48:16 2026 +0900
+
+    Main Page
+
+[33mcommit f1428dc828e5cf52543cf72f86ca64b66b464b13[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Tue May 19 18:19:26 2026 +0900
+
+    담당 API 부분 구현 완료
+
+[33mcommit 6bdc76305a7ae30d3aad693e583bae98fb6c7c5d[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Tue May 19 17:19:55 2026 +0900
+
+    채팅 API  메서드 구현
+
+[33mcommit 1f0577f908aa618523e9eee1ee5bedf2d97bd7a6[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Tue May 19 15:54:52 2026 +0900
+
+    공지사항 API통신 구현
+
+[33mcommit 61af8e58621e0d8337f0cb24612c736744b1f371[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Mon May 18 22:00:04 2026 +0900
+
+    DashboardLayout.tsx Implement
+
+[33mcommit ccd253e5e181d7156ec9119ab59544b2be639d5f[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Mon May 18 19:59:26 2026 +0900
+
+    DashboardLayout Implement
+
+[33mcommit 673fc6546f91527eedf31fa1b0f04f0cda781407[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Mon May 18 19:06:18 2026 +0900
+
+    Change Login
+
+[33mcommit 5e2d64968c086346d61398d9cdeaa1861413930d[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Sun May 17 20:58:07 2026 +0900
+
+    change mainpage and route
+
+[33mcommit 254930d6fdf5d6fe9d9ce96d1bbfeec7a8e007c7[m
+Merge: a12e5b6 cd3614c
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Sun May 17 20:23:56 2026 +0900
+
+    Merge branch 'main' of https://github.com/UsingPP/CollaborativeSoftwareProject
+
+[33mcommit a12e5b668b1a5f08d538f1ceceee8d566a3060ad[m
+Author: Yeongwon Kim <wsx1386@gmail.com>
+Date:   Sun May 17 20:15:44 2026 +0900
+
+    Inital commit
+
+[33mcommit cd3614c1b757b2ffbdd809c5b36739c2dd7968f0[m
+Author: YEONGWON KIM <127569830+UsingPP@users.noreply.github.com>
+Date:   Sun May 17 20:02:59 2026 +0900
+
+    Initial commit

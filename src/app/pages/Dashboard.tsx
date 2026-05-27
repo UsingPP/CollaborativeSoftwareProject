@@ -1,179 +1,117 @@
+import { Link } from "react-router";
 import { Calendar, CheckCircle2, FileText, Pin } from "lucide-react";
-import api from "../store/api";
-import { useParams } from "react-router";
-import { useState, useEffect } from "react";
-
-
-
-
-
-
-const fetchDashboardInfomation = async (teamId: string) => {
-  try {
-    const res = await api.get(`/api/teams/${teamId}`);
-    /*
-    {
-  "team": {
-    "id": 0,
-    "team_name": "string",
-    "subject_name": "string",
-    "invite_code": "string",
-    "status": "string",
-    "deadline": "2026-05-19",
-    "leader_id": 0,
-    "created_at": "2026-05-19T16:10:43.968Z"
-  },
-  "members": [
-    {
-      "additionalProp1": {}
-    }
-  ],
-  "latest_notice": {
-    "additionalProp1": {}
-  },
-  "today_tasks": [],
-  "progress": 0
-}
-    */
-    return res.data;
-  } catch (err) {
-    console.error("Failed to fetch dashboard information", err);
-    return null;
-  }
-}
+import { useTheme } from "../contexts/ThemeContext";
 
 export function Dashboard() {
+  const { theme } = useTheme();
 
-  const params = useParams();
-  const teamId = params.teamId as string;
-  const [teamName, setTeamName] = useState<string>("");
-  const [subject_name, setSubject_name] = useState<string>("");
-  const [announcement, setAnnouncement] = useState({});
-  const [todaySchedule, setTodaySchedule] = useState([]);
-  const [ongoingTask, setOngoingTask] = useState<number>(0);
+  const todayTasks = [
+    { id: 1, task: "UI 디자인 초안 제출", assignee: "박미소" },
+    { id: 2, task: "팀 회의",             assignee: "전체" },
+    { id: 3, task: "보고서 1차 피드백",   assignee: "송희경" },
+  ];
 
-  const getDashboardInfo = async () => {
-    const data = await fetchDashboardInfomation(teamId);
-    if (data) {
-      setTeamName(data.team.team_name);
-      setSubject_name(data.team.subject_name);
-      setAnnouncement(data.latest_notice);
-      setTodaySchedule(data.today_tasks);
-      setOngoingTask(data.progress);
-    }
-  }
+  const ongoingTasks = [
+    { id: 1, task: "프론트엔드 개발", progress: 60, assignee: "고명주" },
+    { id: 2, task: "백엔드 API 설계", progress: 40, assignee: "오소원" },
+    { id: 3, task: "데이터 분석",     progress: 80, assignee: "민지원" },
+  ];
 
-  useEffect(() => {
-    getDashboardInfo();
-  }, []);
+  const recentFiles = [
+    { id: 1, name: "프로젝트 계획서.pptx", uploader: "박미소", date: "2026-03-14" },
+    { id: 2, name: "요구사항 정의서.pdf",  uploader: "송희경", date: "2026-03-13" },
+    { id: 3, name: "회의록_0312.docx",     uploader: "고명주", date: "2026-03-12" },
+  ];
 
   return (
     <div className="p-8">
-      {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">🐻</span>
-          <h1 className="text-3xl font-bold text-gray-900">{subject_name}</h1>
-        </div>
-        <p className="text-gray-600 mt-1">{teamName}</p>
+        <h1 className="text-2xl font-bold text-slate-900">웹 개발 프로젝트</h1>
+        <p className="text-slate-500 mt-1 text-sm">Team Alpha</p>
       </div>
 
-      {/* Important Announcement */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-6 mb-8 shadow-md">
+      {/* Pinned Announcement */}
+      <Link
+        to="/team/announcements"
+        className={`block ${theme.bgLight} border ${theme.borderAccent} rounded-2xl p-5 mb-8 ${theme.hoverBg} transition-colors`}
+      >
         <div className="flex items-start gap-3">
-          <Pin className="w-5 h-5 text-amber-700 mt-1" />
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-2">
-              [중요] {announcement.title}
+          <Pin className={`w-4 h-4 ${theme.textAccent} mt-0.5 shrink-0`} />
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-1 text-sm">
+              [중요] 이번 주 금요일 최종 발표
             </h3>
-            <p className="text-gray-700">
-              {announcement.content}
+            <p className="text-slate-600 text-sm">
+              최종 발표가 3월 19일(금) 오후 2시에 예정되어 있습니다. 발표 자료는 목요일까지 완성해주세요.
             </p>
-            <p className="text-sm text-gray-600 mt-2">작성자: 김민수 · 2026-03-15</p>
+            <p className="text-xs text-slate-400 mt-2">김민수 · 2026-03-15</p>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Today's Schedule */}
-        <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
+        <Link to="/team/schedule" className="block bg-white rounded-2xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-all">
           <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg font-semibold text-gray-900">오늘 일정</h2>
+            <Calendar className={`w-4 h-4 ${theme.textAccent}`} />
+            <h2 className="text-sm font-semibold text-slate-700">오늘 일정</h2>
           </div>
           <div className="space-y-3">
-            {todaySchedule.map((task) => (
-              <div
-                key={task.id}
-                className="pb-3 border-b border-amber-50 last:border-0"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-gray-900">{task.task}</p>
-                    <p className="text-sm text-gray-600">{task.assignee}</p>
-                  </div>
-                  <span className="text-sm text-amber-700 font-medium">
-                    {task.time}
-                  </span>
-                </div>
+            {todayTasks.map((task) => (
+              <div key={task.id} className="pb-3 border-b border-slate-100 last:border-0">
+                <p className="font-medium text-slate-900 text-sm">{task.task}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{task.assignee}</p>
               </div>
             ))}
           </div>
-        </div>
+        </Link>
 
         {/* Ongoing Tasks */}
-        <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
+        <Link to="/team/tasks" className="block bg-white rounded-2xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-all">
           <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg font-semibold text-gray-900">진행 중 업무</h2>
+            <CheckCircle2 className={`w-4 h-4 ${theme.textAccent}`} />
+            <h2 className="text-sm font-semibold text-slate-700">진행 중 업무</h2>
           </div>
           <div className="space-y-4">
             {ongoingTasks.map((task) => (
               <div key={task.id}>
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex justify-between items-center mb-1.5">
                   <div>
-                    <p className="font-medium text-gray-900">{task.task}</p>
-                    <p className="text-sm text-gray-600">{task.assignee}</p>
+                    <p className="font-medium text-slate-900 text-sm">{task.task}</p>
+                    <p className="text-xs text-slate-400">{task.assignee}</p>
                   </div>
-                  <span className="text-sm text-amber-700 font-medium">
-                    {task.progress}%
-                  </span>
+                  <span className={`text-xs ${theme.textAccent} font-semibold`}>{task.progress}%</span>
                 </div>
-                <div className="w-full bg-amber-100 rounded-full h-2">
+                <div className="w-full bg-slate-100 rounded-full h-1.5">
                   <div
-                    className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full transition-all"
+                    className={`bg-gradient-to-r ${theme.avatarGradient} h-1.5 rounded-full transition-all`}
                     style={{ width: `${task.progress}%` }}
                   />
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Link>
 
         {/* Recent Files */}
-        <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
+        <Link to="/team/files" className="block bg-white rounded-2xl shadow-sm p-6 border border-slate-200 hover:shadow-md transition-all">
           <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              최근 업로드 자료
-            </h2>
+            <FileText className={`w-4 h-4 ${theme.textAccent}`} />
+            <h2 className="text-sm font-semibold text-slate-700">최근 업로드 자료</h2>
           </div>
           <div className="space-y-3">
             {recentFiles.map((file) => (
-              <div
-                key={file.id}
-                className="pb-3 border-b border-amber-50 last:border-0"
-              >
-                <p className="font-medium text-gray-900 mb-1">{file.name}</p>
-                <div className="flex justify-between text-sm text-gray-600">
+              <div key={file.id} className="pb-3 border-b border-slate-100 last:border-0">
+                <p className="font-medium text-slate-900 text-sm mb-1 truncate">{file.name}</p>
+                <div className="flex justify-between text-xs text-slate-400">
                   <span>{file.uploader}</span>
                   <span>{file.date}</span>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </Link>
       </div>
     </div>
   );
