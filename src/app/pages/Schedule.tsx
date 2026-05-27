@@ -9,91 +9,59 @@ import {
   Users,
   Sparkles,
   Check,
+  X,
 } from "lucide-react";
 
 export function Schedule() {
-  // 환경 변수에서 백엔드 API URL 로드
   const API_BASE_URL = ((import.meta as any).env?.VITE_API_BASE_URL as string) || "http://localhost:8000";
-  const { team_id } = useParams<{ team_id: string }>();
-  const teamId = team_id || "3"; // 현재 타겟 팀 ID
+  const { teamId } = useParams<{ teamId: string }>();
+  const currentTeamId = teamId || "3";
 
-  // 달력 현재 날짜 상태 관리
-  const [currentDate, setCurrentDate] = useState(new Date()); 
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  // 팀원 목록 상태 관리
   const [teamMembers, setTeamMembers] = useState<string[]>([]);
   const [isMembersLoading, setIsMembersLoading] = useState(false);
 
-  // 백엔드 미연결 대비용 덤프 데이터
   const DUMP_MEMBERS = ["박미소", "송희경", "고명주", "오소원", "민지원", "이채현"];
 
-  // 확정된 공식 회의 일정 데이터 목록
   const [meetings, setMeetings] = useState([
-    {
-      id: 1,
-      date: "2026-03-16",
-      time: "16:00",
-      title: "중간 점검 회의",
-      description: "진행 상황 공유 및 이슈 논의",
-    },
-    {
-      id: 2,
-      date: "2026-03-18",
-      time: "14:00",
-      title: "발표 자료 검토",
-      description: "최종 발표 자료 피드백",
-    },
-    {
-      id: 3,
-      date: "2026-03-19",
-      time: "14:00",
-      title: "최종 발표",
-      description: "프로젝트 최종 발표 및 시연",
-    },
+    { id: 1, date: "2026-03-16", time: "16:00", title: "중간 점검 회의", description: "진행 상황 공유 및 이슈 논의" },
+    { id: 2, date: "2026-03-18", time: "14:00", title: "발표 자료 검토", description: "최종 발표 자료 피드백" },
+    { id: 3, date: "2026-03-19", time: "14:00", title: "최종 발표", description: "프로젝트 최종 발표 및 시연" },
   ]);
 
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
 
-  // AI 스케줄 추천 관련 상태 관리
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [aiTasks, setAiTasks] = useState<any[]>([]); 
+  const [aiTasks, setAiTasks] = useState<any[]>([]);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
 
   const [aiGoal, setAiGoal] = useState("");
   const [aiDeadline, setAiDeadline] = useState("2026-06-15");
   const [aiTaskInput, setAiTaskInput] = useState("");
-  const [aiTaskList, setAiTaskList] = useState<string[]>([]); 
+  const [aiTaskList, setAiTaskList] = useState<string[]>([]);
 
-  // 백엔드에서 소속 팀원 목록 로드 (GET)
   const fetchTeamMembers = async () => {
     setIsMembersLoading(true);
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("access_token");
-      
-      const response = await fetch(`${API_BASE_URL}/api/teams/${teamId}/members`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/${currentTeamId}/members`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           ...(token && { "Authorization": `Bearer ${token}` }),
         }
       });
-
       if (!response.ok) throw new Error("팀원 정보를 불러오지 못했습니다.");
-      
       const data = await response.json();
-      
       if (Array.isArray(data)) {
-        const memberNames = data.map((member: any) => 
-          typeof member === "string" ? member : member.name || member.user_name
-        );
-        setTeamMembers(memberNames);
+        setTeamMembers(data.map((m: any) => typeof m === "string" ? m : m.name || m.user_name));
       } else {
         setTeamMembers(DUMP_MEMBERS);
       }
-    } catch (error) {
-      console.error("팀원 로드 실패 (덤프 데이터 적용):", error);
+    } catch {
       setTeamMembers(DUMP_MEMBERS);
     } finally {
       setIsMembersLoading(false);
@@ -102,104 +70,69 @@ export function Schedule() {
 
   useEffect(() => {
     fetchTeamMembers();
-  }, [teamId]);
+  }, [currentTeamId]);
 
   const daysOfWeek = ["일", "월", "화", "수", "목", "금", "토"];
 
-  // 날짜 문자열 변환 함수 (YYYY-MM-DD)
   const getDateStrFromDay = (day: number) => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
     return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   };
 
-  // 월별 날짜 그리드 계산 데이터 생성
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-
-    const days = [];
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i);
-    }
+    const days: (number | null)[] = [];
+    for (let i = 0; i < startingDayOfWeek; i++) days.push(null);
+    for (let i = 1; i <= lastDay.getDate(); i++) days.push(i);
     return days;
   };
 
-  // 확정된 회의 존재 여부 확인
   const hasMeeting = (day: number | null) => {
     if (!day) return false;
-    const dateStr = getDateStrFromDay(day);
-    return meetings.some((meeting) => meeting.date === dateStr);
+    return meetings.some(m => m.date === getDateStrFromDay(day));
   };
 
-  // 실제 오늘 날짜 여부 확인
   const isToday = (day: number | null) => {
     if (!day) return false;
-    const today = new Date(); 
-    return (
-      day === today.getDate() &&
-      currentDate.getMonth() === today.getMonth() &&
-      currentDate.getFullYear() === today.getFullYear()
-    );
+    const today = new Date();
+    return day === today.getDate() && currentDate.getMonth() === today.getMonth() && currentDate.getFullYear() === today.getFullYear();
   };
 
-  const monthNames = [
-    "1월", "2월", "3월", "4월", "5월", "6월",
-    "7월", "8월", "9월", "10월", "11월", "12월",
-  ];
+  const monthNames = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-  };
+  const goToPreviousMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+  const goToNextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
 
   const selectedDateStr = selectedDay != null ? getDateStrFromDay(selectedDay) : null;
+  const availableMembers = selectedDateStr != null ? teamMembers.filter(m => availability[`${selectedDateStr}-${m}`]) : [];
 
-  const availableMembers = selectedDateStr != null
-    ? teamMembers.filter((m) => availability[`${selectedDateStr}-${m}`])
-    : [];
-
-  // AI 추천 요청 전송 (POST) - 토큰 인증 로직 적용
   const handleRequestAiSchedule = async () => {
     if (!aiGoal || aiTaskList.length === 0) {
       alert("최종 목표와 할 일 리스트를 입력해주세요.");
       return;
     }
-
     setIsAiLoading(true);
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("access_token");
-
-      const response = await fetch(`${API_BASE_URL}/api/teams/${teamId}/ai-sessions`, {
+      const response = await fetch(`${API_BASE_URL}/api/teams/${currentTeamId}/ai-sessions`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
-        body: JSON.stringify({
-          goal: aiGoal,
-          deadline: aiDeadline,
-          tasks: aiTaskList 
-        })
+        body: JSON.stringify({ goal: aiGoal, deadline: aiDeadline, tasks: aiTaskList })
       });
-      
       const data = await response.json();
-      const fetchedSessionId = data.sessionId || "3"; 
+      // 백엔드는 'id' 필드로 반환 (data.sessionId 아님)
+      const fetchedSessionId = String(data.id || "3");
       setSessionId(fetchedSessionId);
-      
       await handleFetchAiSchedule(fetchedSessionId);
-    } catch (error) {
-      console.error("AI 추천 요청 실패:", error);
+    } catch {
       setSessionId("3");
       await handleFetchAiSchedule("3");
     } finally {
@@ -207,12 +140,10 @@ export function Schedule() {
     }
   };
 
-  // AI 추천 결과 조회 (GET)
   const handleFetchAiSchedule = async (id: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/ai-sessions/${id}`);
       const data = await response.json();
-      
       if (data && data.tasks) {
         setAiTasks(data.tasks);
       } else {
@@ -221,9 +152,8 @@ export function Schedule() {
           { task_name: "API 엔드포인트 구현", due_date: "2026-06-01" },
         ]);
       }
-      setShowAiModal(true); 
-    } catch (error) {
-      console.error("AI 결과 조회 실패:", error);
+      setShowAiModal(true);
+    } catch {
       setAiTasks([
         { task_name: "DB 스키마 설계", due_date: "2026-05-25" },
         { task_name: "API 엔드포인트 구현", due_date: "2026-06-01" },
@@ -232,27 +162,19 @@ export function Schedule() {
     }
   };
 
-  // AI 추천 일정 최종 확정 반영 (POST) - 토큰 인증 로직 적용
   const handleConfirmAiSchedule = async () => {
     try {
       const token = localStorage.getItem("token") || localStorage.getItem("access_token");
-
-      const requestBody = {
-        tasks: aiTasks.map(task => ({
-          task_name: task.task_name,
-          due_date: task.due_date
-        }))
-      };
-
       await fetch(`${API_BASE_URL}/api/ai-sessions/${sessionId}/confirm`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           ...(token && { "Authorization": `Bearer ${token}` }),
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          tasks: aiTasks.map(t => ({ task_name: t.task_name, due_date: t.due_date }))
+        })
       });
-      
       const convertedMeetings = aiTasks.map((task, index) => ({
         id: Date.now() + index,
         date: task.due_date,
@@ -260,16 +182,32 @@ export function Schedule() {
         title: `[AI 확정] ${task.task_name}`,
         description: "AI 추천 분석을 거쳐 등록된 팀 공식 스케줄 일정입니다."
       }));
-
-      setMeetings((prev) => [...convertedMeetings, ...prev]);
+      setMeetings(prev => [...convertedMeetings, ...prev]);
       setShowAiModal(false);
       setAiGoal("");
       setAiTaskList([]);
       alert("AI 추천 일정이 성공적으로 등록되었습니다.");
-    } catch (error) {
-      console.error("AI 일정 최종 확정 실패:", error);
+    } catch {
       setShowAiModal(false);
     }
+  };
+
+  const handleRejectAiSchedule = async () => {
+    try {
+      const token = localStorage.getItem("token") || localStorage.getItem("access_token");
+      await fetch(`${API_BASE_URL}/api/ai-sessions/${sessionId}/reject`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` }),
+        },
+      });
+    } catch {
+      // 기각 실패해도 모달 닫기
+    }
+    setShowAiModal(false);
+    setAiGoal("");
+    setAiTaskList([]);
   };
 
   const handleAddTask = () => {
@@ -281,7 +219,6 @@ export function Schedule() {
 
   return (
     <div className="p-8">
-      {/* 상단 헤더 영역 */}
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-2xl">📅</span>
@@ -297,38 +234,23 @@ export function Schedule() {
               {currentDate.getFullYear()}년 {monthNames[currentDate.getMonth()]}
             </h2>
             <div className="flex gap-2">
-              <button
-                onClick={goToPreviousMonth}
-                className="p-2 hover:bg-amber-50 rounded-full transition-colors"
-              >
+              <button onClick={goToPreviousMonth} className="p-2 hover:bg-amber-50 rounded-full transition-colors">
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <button
-                onClick={goToNextMonth}
-                className="p-2 hover:bg-amber-50 rounded-full transition-colors"
-              >
+              <button onClick={goToNextMonth} className="p-2 hover:bg-amber-50 rounded-full transition-colors">
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>
 
           <div className="grid grid-cols-7 gap-2">
-            {daysOfWeek.map((day) => (
-              <div
-                key={day}
-                className="text-center font-semibold text-blue-800 py-2"
-              >
-                {day}
-              </div>
+            {daysOfWeek.map(day => (
+              <div key={day} className="text-center font-semibold text-blue-800 py-2">{day}</div>
             ))}
             {getDaysInMonth(currentDate).map((day, index) => {
               const dateStr = day ? getDateStrFromDay(day) : "";
-              const approvedMeeting = day ? hasMeeting(day) : false;
-              
-              // 해당 날짜를 선택한 참여 가능 인원 수 계산
-              const availableCount = day
-                ? teamMembers.filter((m) => availability[`${dateStr}-${m}`]).length
-                : 0;
+              const approvedMeeting = hasMeeting(day);
+              const availableCount = day ? teamMembers.filter(m => availability[`${dateStr}-${m}`]).length : 0;
 
               return (
                 <div
@@ -338,34 +260,21 @@ export function Schedule() {
                     day
                       ? isToday(day)
                         ? "bg-gradient-to-br from-blue-600 to-indigo-500 text-white font-semibold shadow-md"
-                        // 확정된 회의 일정이 있을 때만 파란색 배경 채우기
                         : approvedMeeting
                         ? "bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 font-medium"
-                        // 인원이 선택했더라도 회의가 없으면 하얀색 일반 배경 유지
                         : "bg-white hover:bg-blue-50 text-gray-700 border border-gray-50"
                       : ""
-                  } ${
-                    day != null && selectedDay === day
-                      ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-white"
-                      : ""
-                  }`}
+                  } ${day != null && selectedDay === day ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-white" : ""}`}
                 >
-                  {/* 날짜 숫자 */}
                   <span className={isToday(day) ? "mb-0" : "mb-1"}>{day}</span>
-                  
-                  {/* 회의 미확정 상태에서 가능 인원이 있을 경우 하단에 파란색 점 표시 */}
                   {day && !approvedMeeting && !isToday(day) && availableCount > 0 && (
                     <div className="absolute bottom-1.5 flex justify-center gap-0.5 w-full px-1">
                       {Array.from({ length: Math.min(availableCount, 5) }).map((_, i) => (
                         <div key={i} className="w-1 h-1 bg-blue-600 rounded-full" />
                       ))}
-                      {availableCount > 5 && (
-                        <span className="text-[7px] text-blue-600 font-bold leading-none">+</span>
-                      )}
+                      {availableCount > 5 && <span className="text-[7px] text-blue-600 font-bold leading-none">+</span>}
                     </div>
                   )}
-
-                  {/* 회의가 최종 확정된 날짜의 하단 단일 점 가이드 */}
                   {day && approvedMeeting && !isToday(day) && (
                     <div className="absolute bottom-1.5 w-1.5 h-1.5 bg-blue-600 rounded-full" />
                   )}
@@ -378,55 +287,30 @@ export function Schedule() {
             <button
               disabled={selectedDay == null}
               onClick={async () => {
-                if (selectedDateStr == null || selectedDay == null) return;
+                if (!selectedDateStr || selectedDay == null) return;
                 const nextTitle = "회의 일정 생성";
-                const nextDescription =
-                  availableMembers.length > 0
-                    ? `가능자: ${availableMembers.join(", ")}`
-                    : "가능자 없음(기본 일정)";
-
-                // 백엔드 연동 및 데이터베이스 저장을 위한 토큰 인증 요청부
+                const nextDescription = availableMembers.length > 0 ? `가능자: ${availableMembers.join(", ")}` : "가능자 없음(기본 일정)";
                 try {
                   const token = localStorage.getItem("token") || localStorage.getItem("access_token");
-                  
-                  await fetch(`${API_BASE_URL}/api/teams/${teamId}/meetings`, {
+                  await fetch(`${API_BASE_URL}/api/teams/${currentTeamId}/meetings`, {
                     method: "POST",
-                    headers: {
-                      "Content-Type": "application/json",
-                      ...(token && { "Authorization": `Bearer ${token}` })
-                    },
+                    headers: { "Content-Type": "application/json", ...(token && { "Authorization": `Bearer ${token}` }) },
                     body: JSON.stringify({ date: selectedDateStr, title: nextTitle, description: nextDescription, time: "14:00" })
                   });
-                } catch(e) {
-                  console.error("회의 등록 실패:", e);
-                }
-
-                setMeetings((prev) => {
-                  const nextId =
-                    prev.length > 0 ? Math.max(...prev.map((m) => m.id)) + 1 : 1;
-
-                  return [
-                    {
-                      id: nextId,
-                      date: selectedDateStr,
-                      time: "14:00",
-                      title: nextTitle,
-                      description: nextDescription,
-                    },
-                    ...prev,
-                  ];
+                } catch { /* ignore */ }
+                setMeetings(prev => {
+                  const nextId = prev.length > 0 ? Math.max(...prev.map(m => m.id)) + 1 : 1;
+                  return [{ id: nextId, date: selectedDateStr, time: "14:00", title: nextTitle, description: nextDescription }, ...prev];
                 });
-
                 setSelectedDay(null);
               }}
               className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-full hover:from-blue-700 hover:to-indigo-600 transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus className="w-4 h-4" />
-              회의 일정 생성
+              <Plus className="w-4 h-4" />회의 일정 생성
             </button>
           </div>
 
-          {/* AI 추천 요청 제출 폼 구역 */}
+          {/* AI 추천 요청 폼 */}
           <div className="mt-8 pt-6 border-t border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-500" />
@@ -435,45 +319,34 @@ export function Schedule() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">최종 목표 (goal)</label>
-                <input
-                  type="text"
-                  placeholder="예: 클라우드 컴퓨팅 기말 팀 프로젝트 완성"
-                  value={aiGoal}
-                  onChange={(e) => setAiGoal(e.target.value)}
+                <input type="text" placeholder="예: 클라우드 컴퓨팅 기말 팀 프로젝트 완성" value={aiGoal}
+                  onChange={e => setAiGoal(e.target.value)}
                   className="w-full px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">마감일 (deadline)</label>
-                  <input
-                    type="date"
-                    value={aiDeadline}
-                    onChange={(e) => setAiDeadline(e.target.value)}
+                  <input type="date" value={aiDeadline} onChange={e => setAiDeadline(e.target.value)}
                     className="w-full px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">할 일 리스트 추가 (tasks)</label>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="예: DB 스키마 설계"
-                      value={aiTaskInput}
-                      onChange={(e) => setAiTaskInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddTask()}
+                    <input type="text" placeholder="예: DB 스키마 설계" value={aiTaskInput}
+                      onChange={e => setAiTaskInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && handleAddTask()}
                       className="flex-1 px-4 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
-                    <button
-                      onClick={handleAddTask}
-                      className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-sm font-medium hover:bg-indigo-100 transition-colors"
-                    >
+                    <button onClick={handleAddTask}
+                      className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-sm font-medium hover:bg-indigo-100 transition-colors">
                       추가
                     </button>
                   </div>
                 </div>
               </div>
-              
+
               {aiTaskList.length > 0 && (
                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-100">
                   {aiTaskList.map((todo, idx) => (
@@ -484,8 +357,7 @@ export function Schedule() {
                 </div>
               )}
 
-              <button
-                onClick={handleRequestAiSchedule}
+              <button onClick={handleRequestAiSchedule}
                 disabled={isAiLoading || !aiGoal || aiTaskList.length === 0}
                 className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
               >
@@ -496,60 +368,34 @@ export function Schedule() {
           </div>
         </div>
 
-        {/* 우측 사이드바: 팀원 가용성 조사 및 일정 관리 */}
+        {/* 우측 사이드바 */}
         <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
           <div className="mb-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              팀원별 가능한 날짜
+              <Users className="w-5 h-5 text-blue-600" />팀원별 가능한 날짜
             </h2>
-            <p className="text-sm text-gray-600">
-              캘린더에서 날짜를 선택하면, 해당 날짜의 가능 여부를 체크할 수 있습니다.
-            </p>
-
+            <p className="text-sm text-gray-600">캘린더에서 날짜를 선택하면, 해당 날짜의 가능 여부를 체크할 수 있습니다.</p>
             <div className="mt-4">
               {isMembersLoading ? (
                 <div className="text-center py-4 text-xs text-gray-400">팀원 정보를 불러오는 중...</div>
               ) : selectedDateStr ? (
                 <>
-                  <div className="text-sm text-blue-700 font-semibold mb-3">
-                    선택 날짜: {selectedDateStr}
-                  </div>
-
+                  <div className="text-sm text-blue-700 font-semibold mb-3">선택 날짜: {selectedDateStr}</div>
                   <div className="space-y-2">
-                    {teamMembers.map((member) => {
+                    {teamMembers.map(member => {
                       const key = `${selectedDateStr}-${member}`;
-                      const checked = availability[key] ?? false;
-
                       return (
-                        <label
-                          key={member}
-                          className="flex items-center justify-between bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-2xl border border-blue-100 transition-colors cursor-pointer"
-                        >
-                          <span className="text-sm font-medium text-gray-800">
-                            {member}
-                          </span>
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) => {
-                              const next = e.target.checked;
-                              setAvailability((prev) => ({
-                                ...prev,
-                                [key]: next,
-                              }));
-                            }}
+                        <label key={member} className="flex items-center justify-between bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-2xl border border-blue-100 transition-colors cursor-pointer">
+                          <span className="text-sm font-medium text-gray-800">{member}</span>
+                          <input type="checkbox" checked={availability[key] ?? false}
+                            onChange={e => setAvailability(prev => ({ ...prev, [key]: e.target.checked }))}
                           />
                         </label>
                       );
                     })}
                   </div>
-
                   <div className="mt-3 text-sm text-gray-600">
-                    선택된 가능자:{" "}
-                    <span className="font-semibold text-blue-700">
-                      {availableMembers.length}명 / {teamMembers.length}명
-                    </span>
+                    선택된 가능자: <span className="font-semibold text-blue-700">{availableMembers.length}명 / {teamMembers.length}명</span>
                   </div>
                 </>
               ) : (
@@ -561,28 +407,18 @@ export function Schedule() {
           </div>
 
           <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
-            예정된 회의
+            <Calendar className="w-5 h-5 text-blue-600" />예정된 회의
           </h2>
           <div className="space-y-4">
-            {meetings.map((meeting) => (
-              <div
-                key={meeting.id}
-                className="p-4 border border-blue-200 rounded-2xl hover:border-blue-400 transition-all hover:shadow-md bg-gradient-to-br from-blue-50 to-indigo-50"
-              >
+            {meetings.map(meeting => (
+              <div key={meeting.id} className="p-4 border border-blue-200 rounded-2xl hover:border-blue-400 transition-all hover:shadow-md bg-gradient-to-br from-blue-50 to-indigo-50">
                 <div className="flex items-start gap-3 mb-2">
                   <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">
-                      {meeting.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {meeting.description}
-                    </p>
+                    <h3 className="font-semibold text-gray-900 mb-1">{meeting.title}</h3>
+                    <p className="text-sm text-gray-600 mb-2">{meeting.description}</p>
                     <div className="flex items-center gap-2 text-sm text-blue-800 font-medium">
-                      <span>{meeting.date}</span>
-                      <span>·</span>
-                      <span>{meeting.time}</span>
+                      <span>{meeting.date}</span><span>·</span><span>{meeting.time}</span>
                     </div>
                   </div>
                 </div>
@@ -592,7 +428,7 @@ export function Schedule() {
         </div>
       </div>
 
-      {/* AI 추천 상세 모달 구역 */}
+      {/* AI 추천 모달 */}
       {showAiModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-indigo-100">
@@ -609,9 +445,7 @@ export function Schedule() {
                 <div key={index} className="p-4 border border-indigo-100 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 rounded-2xl">
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="font-semibold text-gray-900 text-sm">{task.task_name}</h4>
-                    <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg">
-                      기한: {task.due_date}
-                    </span>
+                    <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg">기한: {task.due_date}</span>
                   </div>
                   <p className="text-xs text-gray-500">배정 태스크의 분석된 정해진 마감 요구일 기준 권장 일정 일자입니다.</p>
                 </div>
@@ -620,17 +454,16 @@ export function Schedule() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => setShowAiModal(false)}
-                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-full font-medium hover:bg-gray-200 transition-colors"
+                onClick={handleRejectAiSchedule}
+                className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-full font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
               >
-                취소
+                <X className="w-4 h-4" />기각
               </button>
               <button
                 onClick={handleConfirmAiSchedule}
                 className="flex-1 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-md flex items-center justify-center gap-2"
               >
-                <Check className="w-4 h-4" />
-                일정 최종 확정
+                <Check className="w-4 h-4" />일정 최종 확정
               </button>
             </div>
           </div>

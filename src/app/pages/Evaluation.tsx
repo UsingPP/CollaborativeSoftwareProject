@@ -50,7 +50,7 @@ const fetchMyTeamMateList = async (team_id: string | undefined) => {
   // ]
   if (team_id === undefined) { return null; }
   try {
-    const res = await api.get(`/api/teams/${team_id}/evaluations`);
+    const res = await api.get(`/api/teams/${team_id}/members/eval-status`);
     return res.data;
   } catch (error) {
     console.error(error);

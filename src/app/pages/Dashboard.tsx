@@ -1,402 +1,258 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Calendar,
-  CheckCircle2,
-  ChevronDown,
-  FileText,
-  MessageCircle,
-  Pin,
-  Star,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router";
+import { useSelector } from "react-redux";
+import { Calendar, CheckCircle2, Pin, Users, TrendingUp, PowerOff } from "lucide-react";
 import api from "../store/api";
+import { RootState } from "../store";
 
-type Announcement = {
+interface TeamDetail {
+  id: number;
+  team_name: string;
+  subject_name: string;
+  status: string;
+  deadline: string;
+  leader_id: number;
+}
+
+interface Notice {
   id: number;
   title: string;
-  body: string;
-  author: string;
-  created_at: string;
+  content: string;
+  author_name: string;
   is_leader_notice: boolean;
-};
-
-type TaskItem = {
-  id: number;
-  task: string;
-  assignee: string;
-  progress: number;
   created_at: string;
-  time?: string;
-  title?: string;
-};
+}
 
-type FileItem = {
+interface TodayTask {
   id: number;
-  name: string;
-  uploader: string;
-  uploaded_at: string;
-  date?: string;
-};
+  task_name: string;
+  assignee_name: string;
+  due_date: string;
+  status: string;
+}
 
-type ChatMessage = {
-  id: number;
-  sender: string;
-  text: string;
-  created_at: string;
-};
+interface Member {
+  user_id: number;
+  user_name: string;
+}
 
-type ChatRoom = {
-  id: number;
-  room_name: string;
-  participants: string;
-  messages: ChatMessage[];
-};
-
-type Evaluation = {
-  id: number;
-  evaluator: string;
-  target: string;
-  score: number;
-  comment: string;
-  created_at: string;
-};
-
-// 주어진 항목 배열을 복사하여 날짜 기준 내림차순으로 정렬
-// 원본 배열을 직접 변경하지 않기 위해 spread 연산자로 새 배열을 생성
-const sortByDateDesc = <T extends Record<string, any>>(items: T[], dateKey: string) => {
-  return [...items].sort(
-    (a, b) => new Date(b[dateKey]).getTime() - new Date(a[dateKey]).getTime()
-  );
-};
-
-// ────────────────────────────────────────────
-// Dashboard 컴포넌트
-// ────────────────────────────────────────────
 export function Dashboard() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [files, setFiles] = useState<FileItem[]>([]);
-  const [chats, setChats] = useState<ChatRoom[]>([]);
-  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
-  const [announcementExpanded, setAnnouncementExpanded] = useState(false);
-  const intervalRef = useRef<number | null>(null);
+  const { teamId } = useParams<{ teamId: string }>();
+  const myUserId = useSelector((state: RootState) => state.auth.userId);
 
-  // 발표 목록을 메모이제이션하여 렌더링 성능을 개선
-  // 리더 공지는 항상 상단에 고정되고, 그 외 공지는 최신순으로 정렬
-  const latestAnnouncements = useMemo(() => {
-    const pinned = announcements
-      .filter((announcement) => announcement.is_leader_notice)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const [team, setTeam] = useState<TeamDetail | null>(null);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [todayTasks, setTodayTasks] = useState<TodayTask[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [progress, setProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEndingProject, setIsEndingProject] = useState(false);
 
-    const regular = announcements
-      .filter((announcement) => !announcement.is_leader_notice)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const isLeader = team ? String(team.leader_id) === String(myUserId) : false;
 
-    return [...pinned, ...regular];
-  }, [announcements]);
-
-  // ────────────────────────────────────────────
-  // 요약 정보 계산
-  // ────────────────────────────────────────────
-  const todayTasks = useMemo(
-    () => sortByDateDesc(tasks, "created_at").slice(0, 3),
-    [tasks]
-  );
-
-  const ongoingTasks = useMemo(
-    () => sortByDateDesc(tasks, "created_at").filter((task) => task.progress < 100),
-    [tasks]
-  );
-
-  const recentFiles = useMemo(
-    () => sortByDateDesc(files, "uploaded_at").slice(0, 3),
-    [files]
-  );
-
-  // 채팅방별 마지막 메시지를 계산하고, 최근 활동 순서대로 정렬
-  // 각 채팅룸의 메시지 배열에서 마지막 요소를 추출한 뒤, 메시지 작성 시간으로 비교
-  const chatPreviews = useMemo(() => {
-    return [...chats]
-      .map((room) => {
-        const lastMessage = room.messages?.slice(-1)[0];
-        return {
-          ...room,
-          lastMessage,
-        };
-      })
-      .sort((a, b) => {
-        const aTime = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
-        const bTime = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
-        return bTime - aTime;
-      });
-  }, [chats]);
-
-  const latestEvaluations = useMemo(
-    () => sortByDateDesc(evaluations, "created_at").slice(0, 3),
-    [evaluations]
-  );
-
-  // ────────────────────────────────────────────
-  // 데이터 페칭
-  // ────────────────────────────────────────────
-  // 대시보드에 필요한 모든 데이터를 병렬로 요청
-  // Promise.all을 사용하면 각 API 호출이 동시에 실행되어 전체 로드 시간이 줄어든다.
   const fetchDashboardData = async () => {
+    if (!teamId) return;
     try {
-      const [annRes, taskRes, fileRes, chatRes, evalRes] = await Promise.all([
-        api.get<Announcement[]>("/announcements"),
-        api.get<TaskItem[]>("/tasks"),
-        api.get<FileItem[]>("/files"),
-        api.get<ChatRoom[]>("/chats"),
-        api.get<Evaluation[]>("/evaluations"),
+      const [teamRes, noticesRes] = await Promise.all([
+        api.get(`/api/teams/${teamId}`),
+        api.get(`/api/teams/${teamId}/notices`),
       ]);
 
-      setAnnouncements(sortByDateDesc(annRes.data, "created_at"));
-      setTasks(sortByDateDesc(taskRes.data, "created_at"));
-      setFiles(sortByDateDesc(fileRes.data, "uploaded_at"));
-      setChats(chatRes.data);
-      setEvaluations(sortByDateDesc(evalRes.data, "created_at"));
+      const teamData = teamRes.data;
+      setTeam(teamData.team ?? teamData);
+      setTodayTasks(teamData.today_tasks ?? []);
+      setMembers(teamData.members ?? []);
+      setProgress(teamData.progress ?? 0);
+
+      if (Array.isArray(noticesRes.data)) {
+        setNotices(noticesRes.data);
+      } else if (teamData.latest_notice) {
+        setNotices([teamData.latest_notice]);
+      }
     } catch (error) {
       console.error("Dashboard fetch error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
+  }, [teamId]);
 
-    intervalRef.current = window.setInterval(() => {
-      fetchDashboardData();
-    }, 15000);
+  const handleEndProject = async () => {
+    if (!teamId || !confirm("팀 프로젝트를 종료 처리하시겠습니까?")) return;
+    setIsEndingProject(true);
+    try {
+      await api.patch(`/api/teams/${teamId}/status`, { status: "completed" });
+      await fetchDashboardData();
+    } catch (error) {
+      console.error("팀 상태 변경 실패:", error);
+    } finally {
+      setIsEndingProject(false);
+    }
+  };
 
-    return () => {
-      if (intervalRef.current) {
-        window.clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
+  const pinnedNotices = notices.filter(n => n.is_leader_notice);
+  const regularNotices = notices.filter(n => !n.is_leader_notice);
+  const sortedNotices = [...pinnedNotices, ...regularNotices];
 
-  // ────────────────────────────────────────────
-  // 렌더링
-  // ────────────────────────────────────────────
+  if (isLoading) {
+    return <div className="p-8 text-center text-slate-500">데이터를 불러오는 중...</div>;
+  }
+
   return (
     <div className="p-8">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">🐻</span>
-          <h1 className="text-3xl font-bold text-gray-900">웹 개발 프로젝트</h1>
+      <div className="mb-8 flex items-start justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-2xl">🐻</span>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {team?.team_name ?? team?.subject_name ?? "팀 대시보드"}
+            </h1>
+            {team?.status === "completed" && (
+              <span className="text-xs px-2 py-1 bg-gray-100 text-gray-500 rounded-full font-medium">종료됨</span>
+            )}
+          </div>
+          <p className="text-slate-500 text-sm">{team?.subject_name} · 마감일: {team?.deadline ?? "-"}</p>
         </div>
+        {isLeader && team?.status !== "completed" && (
+          <button
+            onClick={handleEndProject}
+            disabled={isEndingProject}
+            className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-xl hover:bg-red-100 transition-colors text-sm font-medium disabled:opacity-50"
+          >
+            <PowerOff className="w-4 h-4" />
+            {isEndingProject ? "처리 중..." : "프로젝트 종료"}
+          </button>
+        )}
       </div>
 
-      {/* Announcement List */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-6 mb-8 shadow-md">
-        <div className="flex items-start gap-3 mb-4">
-          <Pin className="w-5 h-5 text-amber-700 mt-1" />
-          <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-2">최근 공지사항</h3>
-            <p className="text-gray-700">
-              최신 공지사항을 실시간으로 동기화하고, 리더 공지는 상단에 고정해서 보여줍니다.
-            </p>
+      {/* Progress Bar */}
+      <div className="bg-white rounded-2xl p-5 border border-amber-100 shadow-sm mb-8">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-amber-600" />
+            <span className="text-sm font-semibold text-gray-700">전체 진행률</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setAnnouncementExpanded((prev) => !prev)}
-            className="rounded-full p-2 bg-white/90 text-amber-700 shadow-sm hover:bg-amber-100 transition"
-            aria-label={announcementExpanded ? "공지사항 접기" : "공지사항 펼치기"}
-          >
-            <ChevronDown
-              className={`w-5 h-5 transition-transform ${announcementExpanded ? "rotate-180" : ""}`}
-            />
-          </button>
+          <span className="text-sm font-bold text-amber-700">{progress}%</span>
         </div>
-
-        <div className="space-y-4 transition-all duration-300">
-          {latestAnnouncements
-            .slice(0, announcementExpanded ? latestAnnouncements.length : 1)
-            .map((announcement) => (
-              <div
-                key={announcement.id}
-                className={`rounded-3xl p-5 border ${
-                  announcement.is_leader_notice
-                    ? "border-amber-300 bg-amber-50"
-                    : "border-amber-100 bg-white"
-                } shadow-sm`}
-              >
-              <div className="flex justify-between items-start gap-3">
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900">
-                    {announcement.title}
-                  </h4>
-                  <p className="text-sm text-gray-600 mt-1">{announcement.body}</p>
-                </div>
-                {announcement.is_leader_notice && (
-                  <span className="text-xs font-semibold uppercase text-amber-700">
-                    리더 공지
-                  </span>
-                )}
-              </div>
-              <div className="flex justify-between items-center text-sm text-gray-500 mt-4">
-                <span>작성자: {announcement.author}</span>
-                <span>{new Date(announcement.created_at).toLocaleDateString()}</span>
-              </div>
-            </div>
-          ))}
-          {latestAnnouncements.length === 0 && (
-            <p className="text-sm text-gray-500">공지사항이 없습니다.</p>
-          )}
+        <div className="w-full bg-amber-100 rounded-full h-3">
+          <div
+            className="bg-gradient-to-r from-amber-500 to-orange-500 h-3 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Today's Schedule */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {/* Today's Tasks */}
         <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
           <div className="flex items-center gap-2 mb-4">
             <Calendar className="w-5 h-5 text-amber-700" />
             <h2 className="text-lg font-semibold text-gray-900">오늘 일정</h2>
           </div>
           <div className="space-y-3">
-            {todayTasks.map((task) => (
-              <div
-                key={task.id}
-                className="pb-3 border-b border-amber-50 last:border-0"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium text-gray-900">{task.task}</p>
-                    <p className="text-sm text-gray-600">{task.assignee}</p>
-                  </div>
-                  <span className="text-sm text-amber-700 font-medium">
-                    {task.time}
-                  </span>
+            {todayTasks.length === 0 ? (
+              <p className="text-sm text-gray-400">오늘 예정된 일정이 없습니다.</p>
+            ) : (
+              todayTasks.map(task => (
+                <div key={task.id} className="pb-3 border-b border-amber-50 last:border-0">
+                  <p className="font-medium text-gray-900 text-sm">{task.task_name}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{task.assignee_name}</p>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* Ongoing Tasks */}
+        {/* Progress Details */}
         <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle2 className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg font-semibold text-gray-900">진행 중 업무</h2>
+            <h2 className="text-lg font-semibold text-gray-900">업무 현황</h2>
           </div>
-          <div className="space-y-4">
-            {ongoingTasks.map((task) => (
-              <div key={task.id}>
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="font-medium text-gray-900">{task.task}</p>
-                    <p className="text-sm text-gray-600">{task.assignee}</p>
+          <div className="space-y-3">
+            {todayTasks.length === 0 ? (
+              <p className="text-sm text-gray-400">업무 데이터가 없습니다.</p>
+            ) : (
+              todayTasks.map(task => (
+                <div key={task.id}>
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="font-medium text-gray-900 text-sm truncate flex-1 mr-2">{task.task_name}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                      task.status === "completed" ? "bg-green-100 text-green-700" :
+                      task.status === "in-progress" ? "bg-amber-100 text-amber-700" :
+                      "bg-gray-100 text-gray-600"
+                    }`}>
+                      {task.status === "completed" ? "완료" : task.status === "in-progress" ? "진행 중" : "대기"}
+                    </span>
                   </div>
-                  <span className="text-sm text-amber-700 font-medium">
-                    {task.progress}%
-                  </span>
                 </div>
-                <div className="w-full bg-amber-100 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-amber-500 to-orange-500 h-2 rounded-full transition-all"
-                    style={{ width: `${task.progress}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* Recent Files */}
+        {/* Team Members */}
         <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
           <div className="flex items-center gap-2 mb-4">
-            <FileText className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              최근 업로드 자료
-            </h2>
+            <Users className="w-5 h-5 text-amber-700" />
+            <h2 className="text-lg font-semibold text-gray-900">팀원 ({members.length}명)</h2>
           </div>
-          <div className="space-y-3">
-            {recentFiles.map((file) => (
-              <div
-                key={file.id}
-                className="pb-3 border-b border-amber-50 last:border-0"
-              >
-                <p className="font-medium text-gray-900 mb-1">{file.name}</p>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{file.uploader}</span>
-                  <span>{file.date ?? new Date(file.uploaded_at).toLocaleDateString()}</span>
-                </div>
-              </div>
-            ))}
+          <div className="space-y-2">
+            {members.length === 0 ? (
+              <p className="text-sm text-gray-400">팀원 정보가 없습니다.</p>
+            ) : (
+              members.map((member: any) => {
+                const name = member.user_name || member.name || "알 수 없음";
+                const id = member.user_id || member.id;
+                const isTeamLeader = team && String(team.leader_id) === String(id);
+                return (
+                  <div key={id} className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-400 rounded-full flex items-center justify-center text-white text-sm font-semibold">
+                      {name.charAt(0)}
+                    </div>
+                    <span className="text-sm text-gray-700">{name}</span>
+                    {isTeamLeader && <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">팀장</span>}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
 
-      {/* Chat + Evaluation Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
-        <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
-          <div className="flex items-center gap-2 mb-4">
-            <MessageCircle className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg font-semibold text-gray-900">채팅 미리보기</h2>
-          </div>
-          <div className="space-y-4">
-            {chatPreviews.map((room) => (
-              <div
-                key={room.id}
-                className="rounded-3xl p-4 border border-amber-50 bg-amber-50"
-              >
-                <div className="flex justify-between items-center mb-2">
-                  <div>
-                    <p className="font-medium text-gray-900">{room.room_name}</p>
-                    <p className="text-sm text-gray-600">{room.participants}</p>
-                  </div>
-                  <span className="text-xs text-gray-500">
-                    {room.lastMessage
-                      ? new Date(room.lastMessage.created_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "-"}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700">
-                  {room.lastMessage ? room.lastMessage.text : "최근 메시지가 없습니다."}
-                </p>
-              </div>
-            ))}
-            {chatPreviews.length === 0 && (
-              <p className="text-sm text-gray-500">채팅 데이터가 없습니다.</p>
-            )}
-          </div>
+      {/* Notices */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-3xl p-6 shadow-md">
+        <div className="flex items-center gap-2 mb-4">
+          <Pin className="w-5 h-5 text-amber-700" />
+          <h3 className="font-semibold text-gray-900">공지사항</h3>
         </div>
-
-        <div className="bg-white rounded-3xl shadow-md p-6 border border-amber-100">
-          <div className="flex items-center gap-2 mb-4">
-            <Star className="w-5 h-5 text-amber-700" />
-            <h2 className="text-lg font-semibold text-gray-900">상호 평가</h2>
-          </div>
-          <div className="space-y-4">
-            {latestEvaluations.map((evaluation) => (
-              <div
-                key={evaluation.id}
-                className="rounded-3xl p-4 border border-amber-50 bg-amber-50"
-              >
-                <div className="flex justify-between items-center mb-2">
+        <div className="space-y-3">
+          {sortedNotices.length === 0 ? (
+            <p className="text-sm text-gray-500">공지사항이 없습니다.</p>
+          ) : (
+            sortedNotices.slice(0, 3).map(notice => (
+              <div key={notice.id} className={`rounded-2xl p-4 border ${notice.is_leader_notice ? "border-amber-300 bg-amber-50" : "border-amber-100 bg-white"} shadow-sm`}>
+                <div className="flex justify-between items-start gap-2">
                   <div>
-                    <p className="font-medium text-gray-900">
-                      {evaluation.evaluator} → {evaluation.target}
-                    </p>
-                    <p className="text-sm text-gray-600">{evaluation.comment}</p>
+                    <h4 className="text-sm font-semibold text-gray-900">{notice.title}</h4>
+                    <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{notice.content}</p>
                   </div>
-                  <span className="text-sm text-amber-700 font-semibold">
-                    {evaluation.score}/5
-                  </span>
+                  {notice.is_leader_notice && (
+                    <span className="text-xs font-semibold uppercase text-amber-700 shrink-0">리더 공지</span>
+                  )}
                 </div>
-                <p className="text-xs text-gray-500">
-                  {new Date(evaluation.created_at).toLocaleDateString()}
-                </p>
+                <div className="flex justify-between items-center text-xs text-gray-400 mt-2">
+                  <span>{notice.author_name}</span>
+                  <span>{new Date(notice.created_at).toLocaleDateString()}</span>
+                </div>
               </div>
-            ))}
-            {latestEvaluations.length === 0 && (
-              <p className="text-sm text-gray-500">상호 평가 내역이 없습니다.</p>
-            )}
-          </div>
+            ))
+          )}
         </div>
       </div>
     </div>

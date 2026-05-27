@@ -49,7 +49,7 @@ const SignUpFuction = async (req_data : any) => {
 const logInFunction = async (dispatch: any, user_id : string, password : string) => {
   try{
     console.log({ email : `${user_id}`, password : `${password}`});
-    const res = await api.post(`api/auth/login`, { email : `${user_id}`, password : `${password}`});
+    const res = await api.post(`/api/auth/login`, { email : `${user_id}`, password : `${password}`});
     if ( res.data.access_token ) {
         const token = res.data.access_token;
         const user = res.data.user_id;
@@ -530,17 +530,21 @@ function JoinTeamModal( { closeModal} : { closeModal : () => void}) {
 }
 
 function SignUpModal( {closeModal} : { closeModal : () => void }) {
-  const [userInfomation, setUserInfomation] = useState({"email": "user@example.com",
-                                                        "password": "",
-                                                        "name": "",
-                                                        "department": "",
-                                                        "student_id": ""});
   const [ email, setEmail ] = useState("");
   const [ password, setPassword ] = useState("");
   const [ check_password, setCheckPassowrd ] = useState("");
   const [ name, setName ] = useState("");
   const [ department, setDepartment] = useState("");
   const [ student_id, setStudentId] = useState("");
+  const [ validationError, setValidationError ] = useState("");
+
+  const validatePassword = (pw: string): string | null => {
+    if (pw.length < 8) return "비밀번호는 8자 이상이어야 합니다.";
+    if (!/[0-9]/.test(pw)) return "비밀번호에 숫자가 포함되어야 합니다.";
+    if (!/[a-zA-Z]/.test(pw)) return "비밀번호에 영문자가 포함되어야 합니다.";
+    return null;
+  };
+
   return ( 
   <>
       <div 
@@ -558,7 +562,10 @@ function SignUpModal( {closeModal} : { closeModal : () => void }) {
             <h2 className="text-2xl font-bold text-gray-900">
               회원 가입
             </h2>
-            <p className="text-gray-400 mb-6"> 참여 팀의 인증 코드를 입력해주세요</p>
+            <p className="text-gray-400 mb-2"> 회원 정보를 입력해주세요</p>
+            {validationError && (
+              <p className="text-red-500 text-sm mb-4 bg-red-50 px-3 py-2 rounded-lg">{validationError}</p>
+            )}
             <input
               className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
               placeholder="Email@example.com"
@@ -603,18 +610,27 @@ function SignUpModal( {closeModal} : { closeModal : () => void }) {
             />
             <button
             onClick={async () => {
-                if (password === check_password) {
-                  const req_data = { email: `${email}`,
+                setValidationError("");
+                if (!name.trim()) {
+                  setValidationError("이름을 입력해주세요.");
+                  return;
+                }
+                const pwError = validatePassword(password);
+                if (pwError) {
+                  setValidationError(pwError);
+                  return;
+                }
+                if (password !== check_password) {
+                  setValidationError("비밀번호가 일치하지 않습니다.");
+                  return;
+                }
+                const req_data = { email: `${email}`,
                                     password: `${password}`,
                                     name: `${name}`,
                                     department: `${department}`,
                                     student_id: `${student_id}` }
-                  SignUpFuction(req_data);
-                  closeModal(); // 성공 시 모달 닫기
-                }
-                else {
-
-                }
+                SignUpFuction(req_data);
+                closeModal();
               }}
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-xl font-medium"
             > 가입하기</button>
