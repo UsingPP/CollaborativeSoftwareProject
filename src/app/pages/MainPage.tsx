@@ -15,11 +15,13 @@ import {
 import { useDispatch, UseDispatch, useSelector } from "react-redux";
 import { login, logout } from "../store/authSlice"
 import { RootState } from "../store";
+import axios from "axios";
 import { BASE_API_URL, Team, PORT } from "../types/tpyes";
 
 // ────────────────────────────────────────────
 // 타입(임시)
 // ────────────────────────────────────────────
+const serverUrl = import.meta.env.VITE_SERVER_URL;
 
 interface CreateTeamParams {
   team_name : string;
@@ -33,9 +35,21 @@ interface CreateTeamParams {
 // API 호출부 & 로그인 관리
 // ────────────────────────────────────────────
 
+const SignUpFuction = async (req_data : any) => {
+  try{
+    const res = await api.post(`/api/auth/signup`,req_data);
+    if (res.status == 200) {
+      console.log("Success")
+    }
+  } catch (err) {
+    console.log(err);
+  }
+}
+
 const logInFunction = async (dispatch: any, user_id : string, password : string) => {
   try{
-    const res = await api.post(`/api/auth/login`, { "email" : `${user_id}`, "password" : `${password}`});
+    console.log({ email : `${user_id}`, password : `${password}`});
+    const res = await api.post(`api/auth/login`, { email : `${user_id}`, password : `${password}`});
     if ( res.data.access_token ) {
         const token = res.data.access_token;
         const user = res.data.user_id;
@@ -561,29 +575,45 @@ function SignUpModal( {closeModal} : { closeModal : () => void }) {
             />
             <input
               className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
-              placeholder="이름"
+              placeholder="비밀번호 확인"
               type="password"
+              value={check_password}
+              onChange={(e) => setCheckPassowrd(e.target.value)}
+            />
+            <input
+              className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
+              placeholder="이름"
+              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <input
               className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
               placeholder="학부"
-              type="password"
+              type="text"
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
             />
             <input
               className="w-full border border-blue-200 rounded-xl px-4 py-3 mb-6 outline-none focus:border-blue-500"
               placeholder="학번"
-              type="password"
+              type="text"
               value={student_id}
               onChange={(e) => setStudentId(e.target.value)}
             />
             <button
             onClick={async () => {
-                if (1) {
+                if (password === check_password) {
+                  const req_data = { email: `${email}`,
+                                    password: `${password}`,
+                                    name: `${name}`,
+                                    department: `${department}`,
+                                    student_id: `${student_id}` }
+                  SignUpFuction(req_data);
                   closeModal(); // 성공 시 모달 닫기
+                }
+                else {
+
                 }
               }}
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-500 text-white rounded-xl font-medium"
